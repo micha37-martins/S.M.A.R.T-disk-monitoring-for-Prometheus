@@ -30,9 +30,10 @@ To enable the text_collector on your system add the following as cronjob.
 It will execute the script every five minutes and save the result to the `text_collector` directory.
 
 For example:
+
 `*/5 * * * * /usr/local/bin/smartmon.sh > /var/lib/node_exporter/textfile_collector/smart_metrics.prom`
 
-## How to add S.M.A.R.T. attributes
+## How to add specific S.M.A.R.T. attributes
 If you are missing some attributes you can extend the text_collector.
 Add the desired attributes to `smartmon_attrs` array in `smartmon.sh`.
 
