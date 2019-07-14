@@ -5,6 +5,7 @@ Prometheus `node_exporter` `text_collector` for S.M.A.R.T disk values
 Following dashboards are designed for this exporter:
 
 https://grafana.com/dashboards/10530
+
 https://grafana.com/dashboards/10531
 
 ## Purpose
