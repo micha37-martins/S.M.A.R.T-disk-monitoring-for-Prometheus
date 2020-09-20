@@ -163,9 +163,8 @@ format_output() {
 
 smartctl_version="$(/usr/sbin/smartctl -V | head -n1 | awk '$1 == "smartctl" {print $2}')"
 
-echo "smartctl_version{version=\"${smartctl_version}\"} 1" | format_output
-
 if [[ "$(expr "${smartctl_version}" : '\([0-9]*\)\..*')" -lt 6 ]]; then
+  echo "smartctl_version{version=\"${smartctl_version}\"} 0" | format_output
   exit
 fi
 
@@ -195,3 +194,5 @@ for device in ${device_list}; do
     ;;
   esac
 done | format_output
+
+echo "smartctl_version{version=\"${smartctl_version}\"} 1" | format_output
