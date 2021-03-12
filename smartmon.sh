@@ -104,6 +104,49 @@ parse_smartctl_scsi_attributes() {
   [ ! -z "$grown_defects" ] && echo "grown_defects_count_raw_value{${labels},smart_id=\"12\"} ${grown_defects}"
 }
 
+parse_smartctl_nvme_attributes() {
+  local disk="$1"
+  local disk_type="$2"
+  local labels="disk=\"${disk}\",type=\"${disk_type}\""
+  while read line; do
+    attr_type="$(echo "${line}" | tr '=' ':' | cut -f1 -d: | sed 's/^ \+//g' | tr ' ' '_')"
+    attr_value="$(echo "${line}" | tr '=' ':' | cut -f2 -d: | sed 's/^ \+//g')"
+    case "${attr_type}" in
+    Blocks_read_from_cache_and_sent_to_initiator_) lbas_read="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
+    Accumulated_start-stop_cycles) power_cycle="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
+    Elements_in_grown_defect_list) grown_defects="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
+    Unsafe_Shutdowns) unsafe_shutdowns="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
+    Power_Cycles) power_cycles="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
+    Power_On_Hours) power_on="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
+    Host_Read_Commands) host_read_commands="$(echo "${attr_value}" | tr -dc "0-9" | awk '{printf "%d\n", $1 }')" ;;
+    Host_Write_Commands) host_write_commands="$(echo "${attr_value}" | tr -dc "0-9" | awk '{printf "%d\n", $1 }')" ;;
+    Controller_Busy_Time) controller_busy_time="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
+    Error_Information_Log_Entries) error_info_log_entry="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
+    Temperature) echo ${attr_value}; temp_cel="$(echo ${attr_value} | awk '{ printf "%d\n", $1 }')" ;;
+    Percentage_Used) percentage_used="$(echo ${attr_value} | awk '{ printf "%d\n", $1 }')" ;;
+    Available_Spare) available_spare="$(echo ${attr_value} | awk '{ printf "%d\n", $1 }')" ;;
+    Available_Spare_Threshold) available_spare_threshold="$(echo ${attr_value} | awk '{ printf "%d\n", $1 }')" ;;
+    Media_and_Data_Integrity_Errors) media_and_data_integrity_errors="$(echo ${attr_value} | awk '{ printf "%d\n", $1 }')" ;;
+    esac
+  done
+  
+  [ ! -z "$power_on" ] && echo "power_on_hours_raw_value{${labels},smart_id=\"9\"} ${power_on}"
+  [ ! -z "$temp_cel" ] && echo "temperature_celsius_raw_value{${labels},smart_id=\"194\"} ${temp_cel}"
+  [ ! -z "$lbas_read" ] && echo "total_lbas_read_raw_value{${labels},smart_id=\"242\"} ${lbas_read}"
+  [ ! -z "$power_cycles" ] && echo "power_cycles_count_raw_value{${labels},smart_id=\"255\"} ${power_cycles}"
+  [ ! -z "$unsafe_shutdowns" ] && echo "unsafe_shutdowns_count_raw_value{${labels},smart_id=\"255\"} ${unsafe_shutdowns}"
+  [ ! -z "$grown_defects" ] && echo "grown_defects_count_raw_value{${labels},smart_id=\"12\"} ${grown_defects}"
+  [ ! -z "$percentage_used" ] && echo "percentage_used_raw_value{${labels},smart_id=\"255\"} ${percentage_used}"
+  [ ! -z "$error_info_log_entry" ] && echo "error_information_log_entries_raw_value{${labels},smart_id=\"255\"} ${error_info_log_entry}"
+  [ ! -z "$host_read_commands" ] && echo "host_read_commands_raw_value{${labels},smart_id=\"255\"} ${host_read_commands}"
+  [ ! -z "$host_write_commands" ] && echo "host_write_commands_raw_value{${labels},smart_id=\"255\"} ${host_write_commands}"
+  [ ! -z "$controller_busy_time" ] && echo "controller_busy_time_raw_value{${labels},smart_id=\"255\"} ${controller_busy_time}"
+  [ ! -z "$available_spare" ] && echo "available_spare_raw_value{${labels},smart_id=\"255\"} ${available_spare}"
+  [ ! -z "$available_spare_threshold" ] && echo "available_spare_threshold{${labels},smart_id=\"255\"} ${available_spare_threshold}"
+  [ ! -z "$media_and_data_integrity_errors" ] && echo "media_and_data_integrity_errors_count_raw_value{${labels},smart_id=\"255\"} ${media_and_data_integrity_errors}"
+}
+
+
 parse_smartctl_info() {
   local -i smart_available=0 smart_enabled=0 smart_healthy=0
   local disk="$1" disk_type="$2"
@@ -188,6 +231,7 @@ for device in ${device_list}; do
   sat) /usr/sbin/smartctl -A -d "${type}" "${disk}" | parse_smartctl_attributes "${disk}" "${type}" ;;
   sat+megaraid*) /usr/sbin/smartctl -A -d "${type}" "${disk}" | parse_smartctl_attributes "${disk}" "${type}" ;;
   scsi) /usr/sbin/smartctl -A -d "${type}" "${disk}" | parse_smartctl_scsi_attributes "${disk}" "${type}" ;;
+  nvme) /usr/sbin/smartctl -A -d "${type}" "${disk}" | parse_smartctl_nvme_attributes "${disk}" "${type}" ;;
   megaraid*) /usr/sbin/smartctl -A -d "${type}" "${disk}" | parse_smartctl_scsi_attributes "${disk}" "${type}" ;;
   *)
     echo "disk type is not sat, scsi or megaraid but ${type}"
