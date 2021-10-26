@@ -22,7 +22,7 @@ https://github.com/prometheus/node_exporter/tree/master/text_collector_examples
 ## Set up
 To enable text_collector set the following flag for `node_exporter`:
 - `--collector.textfile.directory`
-
+run command with `/var/lib/node_exporter/textfile_collector`
 To get an up to date version of smartmontools it could be necessary to compile it:
 https://www.smartmontools.org/wiki/Download#Installfromthesourcetarball
 
