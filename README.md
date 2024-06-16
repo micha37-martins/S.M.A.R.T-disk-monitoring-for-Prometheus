@@ -32,6 +32,9 @@ https://www.smartmontools.org/wiki/Download#Installfromthesourcetarball
 
 - save it under `/usr/local/bin/smartmon.sh`
 
+- make sure `/var/lib/node_exporter/textfile_collector/` exists
+  - `mkdir -p /var/lib/node_exporter/textfile_collector/`
+
 To enable the text_collector on your system add the following as cronjob.
 It will execute the script every five minutes and save the result to the `text_collector` directory.
 

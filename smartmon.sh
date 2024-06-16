@@ -9,6 +9,7 @@
 
 # Formatting done via shfmt -i 2
 # https://github.com/mvdan/sh
+set -x
 
 parse_smartctl_attributes_awk="$(
   cat <<'SMARTCTLAWK'
@@ -116,7 +117,7 @@ parse_smartctl_nvme_attributes() {
     Accumulated_start-stop_cycles) power_cycle="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
     Elements_in_grown_defect_list) grown_defects="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
     Unsafe_Shutdowns) unsafe_shutdowns="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
-    Power_Cycles) power_cycles="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
+    Power_Cycle) power_cycle="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
     Power_On_Hours) power_on="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
     Host_Read_Commands) host_read_commands="$(echo "${attr_value}" | tr -dc "0-9" | awk '{printf "%d\n", $1 }')" ;;
     Host_Write_Commands) host_write_commands="$(echo "${attr_value}" | tr -dc "0-9" | awk '{printf "%d\n", $1 }')" ;;
@@ -133,7 +134,7 @@ parse_smartctl_nvme_attributes() {
   [ ! -z "$power_on" ] && echo "power_on_hours_raw_value{${labels},smart_id=\"9\"} ${power_on}"
   [ ! -z "$temp_cel" ] && echo "temperature_celsius_raw_value{${labels},smart_id=\"194\"} ${temp_cel}"
   [ ! -z "$lbas_read" ] && echo "total_lbas_read_raw_value{${labels},smart_id=\"242\"} ${lbas_read}"
-  [ ! -z "$power_cycles" ] && echo "power_cycles_count_raw_value{${labels},smart_id=\"255\"} ${power_cycles}"
+  [ ! -z "$power_cycle" ] && echo "power_cycle_count_raw_value{${labels},smart_id=\"255\"} ${power_cycle}"
   [ ! -z "$unsafe_shutdowns" ] && echo "unsafe_shutdowns_count_raw_value{${labels},smart_id=\"255\"} ${unsafe_shutdowns}"
   [ ! -z "$grown_defects" ] && echo "grown_defects_count_raw_value{${labels},smart_id=\"12\"} ${grown_defects}"
   [ ! -z "$percentage_used" ] && echo "percentage_used_raw_value{${labels},smart_id=\"255\"} ${percentage_used}"
@@ -234,7 +235,7 @@ for device in ${device_list}; do
   nvme) /usr/sbin/smartctl -A -d "${type}" "${disk}" | parse_smartctl_nvme_attributes "${disk}" "${type}" ;;
   megaraid*) /usr/sbin/smartctl -A -d "${type}" "${disk}" | parse_smartctl_scsi_attributes "${disk}" "${type}" ;;
   *)
-    echo "disk type is not sat, scsi or megaraid but ${type}"
+    echo "disk type is not sat, scsi, nvme or megaraid but ${type}"
     exit
     ;;
   esac
