@@ -9,6 +9,9 @@
 
 # Formatting done via shfmt -i 2
 # https://github.com/mvdan/sh
+
+# Source:
+# https://github.com/prometheus-community/node-exporter-textfile-collector-scripts/blob/master/smartmon.sh
 set -x
 
 parse_smartctl_attributes_awk="$(
