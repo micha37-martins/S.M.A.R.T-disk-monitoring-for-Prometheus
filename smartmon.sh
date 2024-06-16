@@ -3,16 +3,8 @@
 # by Samuel B. <samuel_._behan_(at)_dob_._sk> (c) 2012
 # source at: http://devel.dob.sk/collectd-scripts/
 
-# TODO: This probably needs to be a little more complex.  The raw numbers can have more
-#       data in them than you'd think.
-#       http://arstechnica.com/civis/viewtopic.php?p=22062211
-
-# Formatting done via shfmt -i 2
-# https://github.com/mvdan/sh
-
 # Source:
 # https://github.com/prometheus-community/node-exporter-textfile-collector-scripts/blob/master/smartmon.sh
-set -x
 
 parse_smartctl_attributes_awk="$(
   cat <<'SMARTCTLAWK'
