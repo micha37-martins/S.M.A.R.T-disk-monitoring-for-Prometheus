@@ -47,8 +47,10 @@ You get a list of your disks privided attributes by executing:
 If you want to test the exporter locally. For example on a laptop you can move
 the exporter to the following directory and run it.
 ```sh
-sudo cp smartmon.sh /var/lib/node_exporter/textfile_collector/smart_metrics.prom
+# execute collector
+sudo sh -c 'smartmon.sh > /var/lib/node_exporter/textfile_collector/smart_metrics.prom' 
 
+# let node-exporter run
 /usr/bin/prometheus-node-exporter --collector.textfile.directory /var/lib/node_exporter/textfile_collector/
 ```
 

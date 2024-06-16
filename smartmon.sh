@@ -5,6 +5,9 @@
 
 # Source:
 # https://github.com/prometheus-community/node-exporter-textfile-collector-scripts/blob/master/smartmon.sh
+#
+
+export LC_ALL=C
 
 parse_smartctl_attributes_awk="$(
   cat <<'SMARTCTLAWK'
@@ -27,26 +30,23 @@ end_to_end_error
 erase_fail_count
 g_sense_error_rate
 hardware_ecc_recovered
-host_reads_mib
 host_reads_32mib
-host_writes_mib
+host_reads_mib
 host_writes_32mib
+host_writes_mib
 load_cycle_count
 media_wearout_indicator
-multi_zone_error_rate
-wear_leveling_count
 nand_writes_1gib
 offline_uncorrectable
-percent_lifetime_remain
-power_cycle_count
-power_off_retract_count
+power_cycles_count
 power_on_hours
+program_fail_cnt_total
 program_fail_count
 raw_read_error_rate
 reallocated_event_count
 reallocated_sector_ct
-reallocate_nand_blk_cnt
 reported_uncorrect
+runtime_bad_block
 sata_downshift_count
 seek_error_rate
 spin_retry_count
@@ -57,9 +57,10 @@ temperature_celsius
 temperature_internal
 total_lbas_read
 total_lbas_written
-total_host_sector_write
 udma_crc_error_count
 unsafe_shutdown_count
+unused_rsvd_blk_cnt_tot
+wear_leveling_count
 workld_host_reads_perc
 workld_media_wear_indic
 workload_minutes
@@ -89,14 +90,14 @@ parse_smartctl_scsi_attributes() {
     number_of_hours_powered_up_) power_on="$(echo "${attr_value}" | awk '{ printf "%e\n", $1 }')" ;;
     Current_Drive_Temperature) temp_cel="$(echo ${attr_value} | cut -f1 -d' ' | awk '{ printf "%e\n", $1 }')" ;;
     Blocks_read_from_cache_and_sent_to_initiator_) lbas_read="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
-    Accumulated_start-stop_cycles) power_cycle="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
+    Accumulated_start-stop_cycles) power_cycles="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
     Elements_in_grown_defect_list) grown_defects="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
     esac
   done
   [ ! -z "$power_on" ] && echo "power_on_hours_raw_value{${labels},smart_id=\"9\"} ${power_on}"
   [ ! -z "$temp_cel" ] && echo "temperature_celsius_raw_value{${labels},smart_id=\"194\"} ${temp_cel}"
   [ ! -z "$lbas_read" ] && echo "total_lbas_read_raw_value{${labels},smart_id=\"242\"} ${lbas_read}"
-  [ ! -z "$power_cycle" ] && echo "power_cycle_count_raw_value{${labels},smart_id=\"12\"} ${power_cycle}"
+  [ ! -z "$power_cycles" ] && echo "power_cycles_count_raw_value{${labels},smart_id=\"12\"} ${power_cycles}"
   [ ! -z "$grown_defects" ] && echo "grown_defects_count_raw_value{${labels},smart_id=\"12\"} ${grown_defects}"
 }
 
@@ -109,10 +110,10 @@ parse_smartctl_nvme_attributes() {
     attr_value="$(echo "${line}" | tr '=' ':' | cut -f2 -d: | sed 's/^ \+//g')"
     case "${attr_type}" in
     Blocks_read_from_cache_and_sent_to_initiator_) lbas_read="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
-    Accumulated_start-stop_cycles) power_cycle="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
+    Accumulated_start-stop_cycles) power_cycles="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
     Elements_in_grown_defect_list) grown_defects="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
     Unsafe_Shutdowns) unsafe_shutdowns="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
-    Power_Cycle) power_cycle="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
+    Power_Cycle) power_cycles="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
     Power_On_Hours) power_on="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
     Host_Read_Commands) host_read_commands="$(echo "${attr_value}" | tr -dc "0-9" | awk '{printf "%d\n", $1 }')" ;;
     Host_Write_Commands) host_write_commands="$(echo "${attr_value}" | tr -dc "0-9" | awk '{printf "%d\n", $1 }')" ;;
@@ -129,7 +130,7 @@ parse_smartctl_nvme_attributes() {
   [ ! -z "$power_on" ] && echo "power_on_hours_raw_value{${labels},smart_id=\"9\"} ${power_on}"
   [ ! -z "$temp_cel" ] && echo "temperature_celsius_raw_value{${labels},smart_id=\"194\"} ${temp_cel}"
   [ ! -z "$lbas_read" ] && echo "total_lbas_read_raw_value{${labels},smart_id=\"242\"} ${lbas_read}"
-  [ ! -z "$power_cycle" ] && echo "power_cycle_count_raw_value{${labels},smart_id=\"255\"} ${power_cycle}"
+  [ ! -z "$power_cycles" ] && echo "power_cycles_count_raw_value{${labels},smart_id=\"255\"} ${power_cycles}"
   [ ! -z "$unsafe_shutdowns" ] && echo "unsafe_shutdowns_count_raw_value{${labels},smart_id=\"255\"} ${unsafe_shutdowns}"
   [ ! -z "$grown_defects" ] && echo "grown_defects_count_raw_value{${labels},smart_id=\"12\"} ${grown_defects}"
   [ ! -z "$percentage_used" ] && echo "percentage_used_raw_value{${labels},smart_id=\"255\"} ${percentage_used}"
