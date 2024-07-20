@@ -18,6 +18,7 @@ https://github.com/prometheus/node_exporter/tree/master/text_collector_examples
   - text_collector enabled for node_exporter
 - Grafana >= 10
 - smartmontools >= 7
+- jq
 
 ## Set up
 To enable text_collector set the following flag for `node_exporter`:
@@ -66,3 +67,8 @@ https://www.smartmontools.org/wiki/Download#Installfromthesourcetarball
 
 - make sure `/var/lib/node_exporter/textfile_collector/` exists
   - `mkdir -p /var/lib/node_exporter/textfile_collector/`
+
+
+## Tests
+To do tests install bats (bats-core):
+[bats-tutorial](https://bats-core.readthedocs.io/en/stable/tutorial.html)

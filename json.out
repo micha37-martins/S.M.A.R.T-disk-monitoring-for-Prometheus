@@ -1,0 +1,72 @@
+# HELP smartmon_smartctl_version SMART metric smartctl_version
+# TYPE smartmon_smartctl_version gauge
+smartmon_smartctl_version{version="7.4"} 1
+# HELP smartmon_available_spare SMART metric available_spare
+# TYPE smartmon_available_spare gauge
+smartmon_available_spare{disk="/dev/nvme0",type="nvme"} 100
+# HELP smartmon_available_spare_threshold SMART metric available_spare_threshold
+# TYPE smartmon_available_spare_threshold gauge
+smartmon_available_spare_threshold{disk="/dev/nvme0",type="nvme"} 10
+# HELP smartmon_controller_busy_time SMART metric controller_busy_time
+# TYPE smartmon_controller_busy_time gauge
+smartmon_controller_busy_time{disk="/dev/nvme0",type="nvme"} 83
+# HELP smartmon_critical_comp_time SMART metric critical_comp_time
+# TYPE smartmon_critical_comp_time gauge
+smartmon_critical_comp_time{disk="/dev/nvme0",type="nvme"} 0
+# HELP smartmon_critical_warning SMART metric critical_warning
+# TYPE smartmon_critical_warning gauge
+smartmon_critical_warning{disk="/dev/nvme0",type="nvme"} 0
+# HELP smartmon_data_units_read SMART metric data_units_read
+# TYPE smartmon_data_units_read gauge
+smartmon_data_units_read{disk="/dev/nvme0",type="nvme"} 2453999
+# HELP smartmon_data_units_written SMART metric data_units_written
+# TYPE smartmon_data_units_written gauge
+smartmon_data_units_written{disk="/dev/nvme0",type="nvme"} 4088338
+# HELP smartmon_device_active SMART metric device_active
+# TYPE smartmon_device_active gauge
+smartmon_device_active{disk="/dev/nvme0",type="nvme"} 1
+# HELP smartmon_device_info SMART metric device_info
+# TYPE smartmon_device_info gauge
+smartmon_device_info{disk="/dev/nvme0",type="nvme",vendor="",product="",revision="",lun_id="",model_family="",device_model="",serial_number="23048U472208",firmware_version="731100WD"} 1
+# HELP smartmon_device_smart_available SMART metric device_smart_available
+# TYPE smartmon_device_smart_available gauge
+smartmon_device_smart_available{disk="/dev/nvme0",type="nvme"} 0
+# HELP smartmon_device_smart_enabled SMART metric device_smart_enabled
+# TYPE smartmon_device_smart_enabled gauge
+smartmon_device_smart_enabled{disk="/dev/nvme0",type="nvme"} 0
+# HELP smartmon_device_smart_healthy SMART metric device_smart_healthy
+# TYPE smartmon_device_smart_healthy gauge
+smartmon_device_smart_healthy{disk="/dev/nvme0",type="nvme"} true
+# HELP smartmon_host_reads SMART metric host_reads
+# TYPE smartmon_host_reads gauge
+smartmon_host_reads{disk="/dev/nvme0",type="nvme"} 24206161
+# HELP smartmon_host_writes SMART metric host_writes
+# TYPE smartmon_host_writes gauge
+smartmon_host_writes{disk="/dev/nvme0",type="nvme"} 53251926
+# HELP smartmon_media_errors SMART metric media_errors
+# TYPE smartmon_media_errors gauge
+smartmon_media_errors{disk="/dev/nvme0",type="nvme"} 0
+# HELP smartmon_num_err_log_entries SMART metric num_err_log_entries
+# TYPE smartmon_num_err_log_entries gauge
+smartmon_num_err_log_entries{disk="/dev/nvme0",type="nvme"} 0
+# HELP smartmon_percentage_used SMART metric percentage_used
+# TYPE smartmon_percentage_used gauge
+smartmon_percentage_used{disk="/dev/nvme0",type="nvme"} 0
+# HELP smartmon_power_cycles SMART metric power_cycles
+# TYPE smartmon_power_cycles gauge
+smartmon_power_cycles{disk="/dev/nvme0",type="nvme"} 1108
+# HELP smartmon_power_on_hours SMART metric power_on_hours
+# TYPE smartmon_power_on_hours gauge
+smartmon_power_on_hours{disk="/dev/nvme0",type="nvme"} 74
+# HELP smartmon_smartctl_run SMART metric smartctl_run
+# TYPE smartmon_smartctl_run gauge
+smartmon_smartctl_run{disk="/dev/nvme0",type="nvme"} 1721322621
+# HELP smartmon_temperature SMART metric temperature
+# TYPE smartmon_temperature gauge
+smartmon_temperature{disk="/dev/nvme0",type="nvme"} 30
+# HELP smartmon_unsafe_shutdowns SMART metric unsafe_shutdowns
+# TYPE smartmon_unsafe_shutdowns gauge
+smartmon_unsafe_shutdowns{disk="/dev/nvme0",type="nvme"} 53
+# HELP smartmon_warning_temp_time SMART metric warning_temp_time
+# TYPE smartmon_warning_temp_time gauge
+smartmon_warning_temp_time{disk="/dev/nvme0",type="nvme"} 0

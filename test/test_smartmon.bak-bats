@@ -1,0 +1,199 @@
+#!/usr/bin/env bats
+
+setup() {
+  load 'test_helper/bats-assert/load'
+  load 'test_helper/bats-support/load'
+  load '../src/smartmon.sh'
+  # make executables in src/ visible to PATH
+  PATH="$( pwd )/src/smartmon.sh:$PATH"
+}
+
+### Begin Helper Functions
+# Helper for parse_smartctl_nvme_attributes
+run_parse_smartctl_nvme_attributes() {
+  local disk="$1"
+  local disk_type="$2"
+  local test_data="$3"
+  echo "$test_data" | parse_smartctl_nvme_attributes "$disk" "$disk_type"
+}
+
+# Helper for parse_smartctl_attributes
+run_parse_smartctl_attributes() {
+  local disk="$1"
+  local disk_type="$2"
+  local test_data="$3"
+  local smartmon_attrs="$4"
+  echo "$test_data" | parse_smartctl_attributes "$disk" "$disk_type"
+}
+### End Helper Functions
+
+# Example test_data for: "parse_smartctl_nvme_attributes"
+#
+#sudo smartctl -A -d nvme /dev/nvme0
+#smartctl 7.4 2023-08-01 r5530 [x86_64-linux-6.6.32-1-MANJARO] (local build)
+#Copyright (C) 2002-23, Bruce Allen, Christian Franke, www.smartmontools.org
+#
+#=== START OF SMART DATA SECTION ===
+#SMART/Health Information (NVMe Log 0x02)
+#Critical Warning:                   0x00
+#Temperature:                        28 Celsius
+#Available Spare:                    100%
+#Available Spare Threshold:          10%
+#Percentage Used:                    0%
+#Data Units Read:                    2,389,400 [1.22 TB]
+#Data Units Written:                 3,958,438 [2.02 TB]
+#Host Read Commands:                 23,444,268
+#Host Write Commands:                51,391,963
+#Controller Busy Time:               79
+#Power Cycles:                       1,012
+#Power On Hours:                     70
+#Unsafe Shutdowns:                   52
+#Media and Data Integrity Errors:    0
+#Error Information Log Entries:      0
+#Warning  Comp. Temperature Time:    0
+#Critical Comp. Temperature Time:    0
+#Temperature Sensor 1:               36 Celsius
+#Temperature Sensor 2:               28 Celsius
+
+###############################################################################
+# sudo smartctl -A /dev/sda
+#smartctl 7.1 2019-12-30 r5022 [x86_64-linux-5.4.0-182-generic] (local build)
+#Copyright (C) 2002-19, Bruce Allen, Christian Franke, www.smartmontools.org
+#
+#=== START OF READ SMART DATA SECTION ===
+#SMART Attributes Data Structure revision number: 1
+#Vendor Specific SMART Attributes with Thresholds:
+#ID# ATTRIBUTE_NAME          FLAG     VALUE WORST THRESH TYPE      UPDATED  WHEN_FAILED RAW_VALUE
+#  1 Raw_Read_Error_Rate     0x002f   100   100   050    Pre-fail  Always       -       0
+#  5 Reallocate_NAND_Blk_Cnt 0x0032   100   100   010    Old_age   Always       -       0
+#  9 Power_On_Hours          0x0032   100   100   050    Old_age   Always       -       30104
+# 12 Power_Cycle_Count       0x0032   100   100   050    Old_age   Always       -       57
+#171 Program_Fail_Count      0x0032   100   100   050    Old_age   Always       -       0
+#172 Erase_Fail_Count        0x0032   100   100   050    Old_age   Always       -       0
+#173 Ave_Block-Erase_Count   0x0032   100   100   050    Old_age   Always       -       183
+#174 Unexpect_Power_Loss_Ct  0x0032   100   100   050    Old_age   Always       -       31
+#180 Unused_Reserve_NAND_Blk 0x0032   100   100   050    Old_age   Always       -       100
+#183 SATA_Interfac_Downshift 0x0032   100   100   050    Old_age   Always       -       120
+#184 Error_Correction_Count  0x0032   100   100   050    Old_age   Always       -       8
+#187 Reported_Uncorrect      0x0032   100   100   050    Old_age   Always       -       0
+#194 Temperature_Celsius     0x0022   069   049   050    Old_age   Always   In_the_past 31 (Min/Max 25/51)
+#196 Reallocated_Event_Count 0x0032   100   100   050    Old_age   Always       -       0
+#197 Current_Pending_Sector  0x0032   100   100   050    Old_age   Always       -       0
+#198 Offline_Uncorrectable   0x0030   100   100   050    Old_age   Offline      -       0
+#199 UDMA_CRC_Error_Count    0x0032   100   100   050    Old_age   Always       -       0
+#202 Percent_Lifetime_Remain 0x0030   088   088   001    Old_age   Offline      -       88
+#206 Write_Error_Rate        0x002e   100   100   050    Old_age   Always       -       0
+#210 Success_RAIN_Recov_Cnt  0x0032   100   100   050    Old_age   Always       -       0
+#246 Total_LBAs_Written      0x0032   100   100   050    Old_age   Always       -       8866549306
+#247 Host_Program_Page_Count 0x0032   100   100   050    Old_age   Always       -       277079665
+#248 FTL_Program_Page_Count  0x0032   100   100   050    Old_age   Always       -       318468096
+
+
+### Begin Tests
+@test "parse_smartctl_nvme_attributes with temperature test_data" {
+  local disk="nvme0"
+  local disk_type="nvme"
+  local test_data="Temperature:                        28 Celsius"
+
+  run run_parse_smartctl_nvme_attributes "$disk" "$disk_type" "$test_data"
+  # Note: Content of heredoc needs tabs as indentation to work. [%s/"  "/\t/g]
+  assert_output - <<-EOF
+		Temperature
+		28 Celsius
+		temperature_celsius_raw_value{disk="nvme0",type="nvme",smart_id="194"} 28
+EOF
+}
+
+@test "parse_smartctl_nvme_attributes with empty test_data" {
+  local disk="nvme0"
+  local disk_type="nvme"
+  local test_data=""
+
+  run run_parse_smartctl_nvme_attributes "$disk" "$disk_type" "$test_data"
+  # Note: Content of heredoc needs tabs as indentation to work. [%s/"  "/\t/g]
+  assert_output ""
+}
+
+@test "parse_smartctl_nvme_attributes data_units_written" {
+  local disk="nvme0"
+  local disk_type="nvme"
+  local test_data="Data Units Written:                 3,958,438 [2.02 TB]"
+
+  run run_parse_smartctl_nvme_attributes "$disk" "$disk_type" "$test_data"
+  # Note: Content of heredoc needs tabs as indentation to work. [%s/"  "/\t/g]
+  assert_output - <<-EOF
+		Data_Units_Written
+		data_units_written_raw_value{disk="nvme0",type="nvme",smart_id="8"} 3958438
+EOF
+}
+
+@test "parse_smartctl_sata_attributes power_on_hours" {
+  local disk="sda"
+  local disk_type="sat"
+  local test_data="9 Power_On_Hours          0x0032   100   100   050    Old_age   Always       -       30104"
+  local smartmon_attrs="power_on_hours"
+
+  run run_parse_smartctl_attributes "$disk" "$disk_type" "$test_data"
+  # Note: Content of heredoc needs tabs as indentation to work. [%s/"  "/\t/g]
+  assert_output - <<-EOF
+		power_on_hours_value{disk="sda",type="sat",smart_id="9"} 100
+		power_on_hours_worst{disk="sda",type="sat",smart_id="9"} 100
+		power_on_hours_threshold{disk="sda",type="sat",smart_id="9"} 50
+		power_on_hours_raw_value{disk="sda",type="sat",smart_id="9"} 3.010400e+04
+EOF
+}
+
+@test "parse_smartctl_sata_attributes invalid data" {
+  local disk="sda"
+  local disk_type="sat"
+  local test_data="FOOBAR"
+
+  run run_parse_smartctl_attributes "$disk" "$disk_type" "$test_data"
+  # No output expected
+  assert_output ""
+}
+
+@test "parse_smartctl_sata_attributes replace hyphens" {
+  local disk="sda"
+  local disk_type="sat"
+  local test_data="9 Power-On-Hours"
+  local smartmon_attrs="power_on_hours"
+
+  run run_parse_smartctl_attributes "$disk" "$disk_type" "$test_data" "$smartmon_attrs"
+  assert_output - <<-EOF
+		power_on_hours_value{disk="sda",type="sat",smart_id="9"} 0
+		power_on_hours_worst{disk="sda",type="sat",smart_id="9"} 0
+		power_on_hours_threshold{disk="sda",type="sat",smart_id="9"} 0
+		power_on_hours_raw_value{disk="sda",type="sat",smart_id="9"} 0.000000e+00
+EOF
+}
+
+@test "parse_smartctl_sata_attributes multiple inputs" {
+  local disk="sda"
+  local disk_type="sat"
+  local smartmon_attrs="power_on_hours|power_cycle_count"
+  local test_data="9 Power_On_Hours          0x0032   100   100   050    Old_age   Always       -       30104\n 12 Power_Cycle_Count       0x0032   100   100   050    Old_age   Always       -       57\n"
+
+  run run_parse_smartctl_attributes "$disk" "$disk_type" "$test_data" "$smartmon_attrs"
+  assert_output - <<-EOF
+		power_on_hours_value{disk="sda",type="sat",smart_id="9"} 100
+		power_on_hours_worst{disk="sda",type="sat",smart_id="9"} 100
+		power_on_hours_threshold{disk="sda",type="sat",smart_id="9"} 50
+		power_on_hours_raw_value{disk="sda",type="sat",smart_id="9"} 3.010400e+04
+EOF
+}
+
+@test "parse_smartctl_sata_attributes mixed inputs valid and invalid" {
+  local disk="sda"
+  local disk_type="sat"
+  local smartmon_attrs="power_on_hours|power_cycle_count"
+  local test_data="9 Power_On_Hours          0x0032   100   100   050    Old_age   Always       -       30104\n THISISINVALID \n 12 Power_Cycle_Count       0x0032   100   100   050    Old_age   Always       -       57\n"
+
+  run run_parse_smartctl_attributes "$disk" "$disk_type" "$test_data" "$smartmon_attrs"
+  assert_output - <<-EOF
+		power_on_hours_value{disk="sda",type="sat",smart_id="9"} 100
+		power_on_hours_worst{disk="sda",type="sat",smart_id="9"} 100
+		power_on_hours_threshold{disk="sda",type="sat",smart_id="9"} 50
+		power_on_hours_raw_value{disk="sda",type="sat",smart_id="9"} 3.010400e+04
+EOF
+}

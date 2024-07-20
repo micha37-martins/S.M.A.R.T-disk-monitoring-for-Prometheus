@@ -1,14 +1,25 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+# This script collects metrics from disks using smartctl. It will parse the
+# output of scmartctl and collect metrics by a given filter.
+#
 # Script informed by the collectd monitoring script for smartmontools (using smartctl)
 # by Samuel B. <samuel_._behan_(at)_dob_._sk> (c) 2012
 # source at: http://devel.dob.sk/collectd-scripts/
-
 # Source:
 # https://github.com/prometheus-community/node-exporter-textfile-collector-scripts/blob/master/smartmon.sh
 #
+# New attributes needs to be added to different areas. They are marked with a
+# comment "Add new ..."
+
+set -o errexit   # abort on nonzero exitstatus
+# set -o nounset   # abort on unbound variable
+set -o pipefail  # don't hide errors within pipes
 
 export LC_ALL=C
 
+# Check if first field is a number and the second consists of alphanumeric
+# characters, underscores and/or hyphens. Gsub replaces hyphens with underscores.
 parse_smartctl_attributes_awk="$(
   cat <<'SMARTCTLAWK'
 $1 ~ /^ *[0-9]+$/ && $2 ~ /^[a-zA-Z0-9_-]+$/ {
@@ -21,11 +32,14 @@ $1 ~ /^ *[0-9]+$/ && $2 ~ /^[a-zA-Z0-9_-]+$/ {
 SMARTCTLAWK
 )"
 
+# Add new attributes here. This variable is used as a filter.
+# TODO: validate where it is actually used. SATA only?
 smartmon_attrs="$(
   cat <<'SMARTMONATTRS'
 airflow_temperature_cel
 command_timeout
 current_pending_sector
+data_units_written
 end_to_end_error
 erase_fail_count
 g_sense_error_rate
@@ -66,81 +80,77 @@ workld_media_wear_indic
 workload_minutes
 SMARTMONATTRS
 )"
-smartmon_attrs="$(echo ${smartmon_attrs} | xargs | tr ' ' '|')"
+smartmon_attrs="$(echo "${smartmon_attrs}" | xargs | tr ' ' '|')"
 
+# Remove leading spaces and formatting available information for output that
+# is usable for Prometheus. Grep filters only matching lines that are stored
+# in "smartmon_attrs".
+# Example output:
+# spin_up_time_worst{disk="sda",type="ssd",smart_id="2"} 100
+#
+# Input variables:
+# - disk = path of a specific disk
+# - type = type of the specific disk
 parse_smartctl_attributes() {
   local disk="$1"
   local disk_type="$2"
   local labels="disk=\"${disk}\",type=\"${disk_type}\""
-  local vars="$(echo "${smartmon_attrs}" | xargs | tr ' ' '|')"
+
   sed 's/^ \+//g' |
     awk -v labels="${labels}" "${parse_smartctl_attributes_awk}" 2>/dev/null |
-    tr A-Z a-z |
+    tr '[:upper:]' '[:lower:]' |
     grep -E "(${smartmon_attrs})"
 }
 
-parse_smartctl_scsi_attributes() {
-  local disk="$1"
-  local disk_type="$2"
-  local labels="disk=\"${disk}\",type=\"${disk_type}\""
-  while read line; do
-    attr_type="$(echo "${line}" | tr '=' ':' | cut -f1 -d: | sed 's/^ \+//g' | tr ' ' '_')"
-    attr_value="$(echo "${line}" | tr '=' ':' | cut -f2 -d: | sed 's/^ \+//g')"
-    case "${attr_type}" in
-    number_of_hours_powered_up_) power_on="$(echo "${attr_value}" | awk '{ printf "%e\n", $1 }')" ;;
-    Current_Drive_Temperature) temp_cel="$(echo ${attr_value} | cut -f1 -d' ' | awk '{ printf "%e\n", $1 }')" ;;
-    Blocks_read_from_cache_and_sent_to_initiator_) lbas_read="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
-    Accumulated_start-stop_cycles) power_cycles="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
-    Elements_in_grown_defect_list) grown_defects="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
-    esac
-  done
-  [ ! -z "$power_on" ] && echo "power_on_hours_raw_value{${labels},smart_id=\"9\"} ${power_on}"
-  [ ! -z "$temp_cel" ] && echo "temperature_celsius_raw_value{${labels},smart_id=\"194\"} ${temp_cel}"
-  [ ! -z "$lbas_read" ] && echo "total_lbas_read_raw_value{${labels},smart_id=\"242\"} ${lbas_read}"
-  [ ! -z "$power_cycles" ] && echo "power_cycles_count_raw_value{${labels},smart_id=\"12\"} ${power_cycles}"
-  [ ! -z "$grown_defects" ] && echo "grown_defects_count_raw_value{${labels},smart_id=\"12\"} ${grown_defects}"
-}
-
+# Expected input:
+#   Piped output from smartctl as input stream
+#   $1 = disk path (example: /dev/sda)
+#   $2 = disk type (example: sat)
 parse_smartctl_nvme_attributes() {
   local disk="$1"
   local disk_type="$2"
   local labels="disk=\"${disk}\",type=\"${disk_type}\""
-  while read line; do
+  # Add new NVME attributes here.
+  while read -r line; do
     attr_type="$(echo "${line}" | tr '=' ':' | cut -f1 -d: | sed 's/^ \+//g' | tr ' ' '_')"
     attr_value="$(echo "${line}" | tr '=' ':' | cut -f2 -d: | sed 's/^ \+//g')"
+    echo "${attr_type}"
     case "${attr_type}" in
-    Blocks_read_from_cache_and_sent_to_initiator_) lbas_read="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
-    Accumulated_start-stop_cycles) power_cycles="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
-    Elements_in_grown_defect_list) grown_defects="$(echo ${attr_value} | awk '{ printf "%e\n", $1 }')" ;;
-    Unsafe_Shutdowns) unsafe_shutdowns="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
-    Power_Cycle) power_cycles="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
-    Power_On_Hours) power_on="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
+    Accumulated_start-stop_cycles) power_cycles="$(echo "${attr_value}" | awk '{ printf "%e\n", $1 }')" ;;
+    Available_Spare) available_spare="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
+    Available_Spare_Threshold) available_spare_threshold="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
+    Blocks_read_from_cache_and_sent_to_initiator_) lbas_read="$(echo "${attr_value}" | awk '{ printf "%e\n", $1 }')" ;;
+    Controller_Busy_Time) controller_busy_time="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
+    Data_Units_Written) data_units_written="$(echo "${attr_value}" | sed 's/,//g' | awk '{ printf "%u\n", $1 }')" ;;
+    Elements_in_grown_defect_list) grown_defects="$(echo "${attr_value}" | awk '{ printf "%e\n", $1 }')" ;;
+    Error_Information_Log_Entries) error_info_log_entry="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
     Host_Read_Commands) host_read_commands="$(echo "${attr_value}" | tr -dc "0-9" | awk '{printf "%d\n", $1 }')" ;;
     Host_Write_Commands) host_write_commands="$(echo "${attr_value}" | tr -dc "0-9" | awk '{printf "%d\n", $1 }')" ;;
-    Controller_Busy_Time) controller_busy_time="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
-    Error_Information_Log_Entries) error_info_log_entry="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
-    Temperature) echo ${attr_value}; temp_cel="$(echo ${attr_value} | awk '{ printf "%d\n", $1 }')" ;;
-    Percentage_Used) percentage_used="$(echo ${attr_value} | awk '{ printf "%d\n", $1 }')" ;;
-    Available_Spare) available_spare="$(echo ${attr_value} | awk '{ printf "%d\n", $1 }')" ;;
-    Available_Spare_Threshold) available_spare_threshold="$(echo ${attr_value} | awk '{ printf "%d\n", $1 }')" ;;
-    Media_and_Data_Integrity_Errors) media_and_data_integrity_errors="$(echo ${attr_value} | awk '{ printf "%d\n", $1 }')" ;;
+    Media_and_Data_Integrity_Errors) media_and_data_integrity_errors="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
+    Percentage_Used) percentage_used="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
+    Power_Cycles) power_cycles="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
+    Power_On_Hours) power_on="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
+    Temperature) echo "${attr_value}"; temp_cel="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
+    Unsafe_Shutdowns) unsafe_shutdowns="$(echo "${attr_value}" | awk '{ printf "%d\n", $1 }')" ;;
     esac
   done
 
-  [ ! -z "$power_on" ] && echo "power_on_hours_raw_value{${labels},smart_id=\"9\"} ${power_on}"
-  [ ! -z "$temp_cel" ] && echo "temperature_celsius_raw_value{${labels},smart_id=\"194\"} ${temp_cel}"
-  [ ! -z "$lbas_read" ] && echo "total_lbas_read_raw_value{${labels},smart_id=\"242\"} ${lbas_read}"
-  [ ! -z "$power_cycles" ] && echo "power_cycles_count_raw_value{${labels},smart_id=\"255\"} ${power_cycles}"
-  [ ! -z "$unsafe_shutdowns" ] && echo "unsafe_shutdowns_count_raw_value{${labels},smart_id=\"255\"} ${unsafe_shutdowns}"
-  [ ! -z "$grown_defects" ] && echo "grown_defects_count_raw_value{${labels},smart_id=\"12\"} ${grown_defects}"
-  [ ! -z "$percentage_used" ] && echo "percentage_used_raw_value{${labels},smart_id=\"255\"} ${percentage_used}"
-  [ ! -z "$error_info_log_entry" ] && echo "error_information_log_entries_raw_value{${labels},smart_id=\"255\"} ${error_info_log_entry}"
-  [ ! -z "$host_read_commands" ] && echo "host_read_commands_raw_value{${labels},smart_id=\"255\"} ${host_read_commands}"
-  [ ! -z "$host_write_commands" ] && echo "host_write_commands_raw_value{${labels},smart_id=\"255\"} ${host_write_commands}"
-  [ ! -z "$controller_busy_time" ] && echo "controller_busy_time_raw_value{${labels},smart_id=\"255\"} ${controller_busy_time}"
-  [ ! -z "$available_spare" ] && echo "available_spare_raw_value{${labels},smart_id=\"255\"} ${available_spare}"
-  [ ! -z "$available_spare_threshold" ] && echo "available_spare_threshold{${labels},smart_id=\"255\"} ${available_spare_threshold}"
-  [ ! -z "$media_and_data_integrity_errors" ] && echo "media_and_data_integrity_errors_count_raw_value{${labels},smart_id=\"255\"} ${media_and_data_integrity_errors}"
+  # Add new NVME attributes here.
+  [ -n "$available_spare" ] && echo "available_spare_raw_value{${labels},smart_id=\"255\"} ${available_spare}"
+  [ -n "$available_spare_threshold" ] && echo "available_spare_threshold{${labels},smart_id=\"255\"} ${available_spare_threshold}"
+  [ -n "$controller_busy_time" ] && echo "controller_busy_time_raw_value{${labels},smart_id=\"255\"} ${controller_busy_time}"
+  [ -n "$data_units_written" ] && echo "data_units_written_raw_value{${labels},smart_id=\"8\"} ${data_units_written}"
+  [ -n "$lbas_read" ] && echo "total_lbas_read_raw_value{${labels},smart_id=\"242\"} ${lbas_read}"
+  [ -n "$error_info_log_entry" ] && echo "error_information_log_entries_raw_value{${labels},smart_id=\"255\"} ${error_info_log_entry}"
+  [ -n "$grown_defects" ] && echo "grown_defects_count_raw_value{${labels},smart_id=\"12\"} ${grown_defects}"
+  [ -n "$host_read_commands" ] && echo "host_read_commands_raw_value{${labels},smart_id=\"255\"} ${host_read_commands}"
+  [ -n "$host_write_commands" ] && echo "host_write_commands_raw_value{${labels},smart_id=\"255\"} ${host_write_commands}"
+  [ -n "$media_and_data_integrity_errors" ] && echo "media_and_data_integrity_errors_count_raw_value{${labels},smart_id=\"255\"} ${media_and_data_integrity_errors}"
+  [ -n "$percentage_used" ] && echo "percentage_used_raw_value{${labels},smart_id=\"255\"} ${percentage_used}"
+  [ -n "$power_cycles" ] && echo "power_cycles_count_raw_value{${labels},smart_id=\"255\"} ${power_cycles}"
+  [ -n "$power_on" ] && echo "power_on_hours_raw_value{${labels},smart_id=\"9\"} ${power_on}"
+  [ -n "$temp_cel" ] && echo "temperature_celsius_raw_value{${labels},smart_id=\"194\"} ${temp_cel}"
+  [ -n "$unsafe_shutdowns" ] && echo "unsafe_shutdowns_count_raw_value{${labels},smart_id=\"255\"} ${unsafe_shutdowns}"
 }
 
 
@@ -148,7 +158,7 @@ parse_smartctl_info() {
   local -i smart_available=0 smart_enabled=0 smart_healthy=0
   local disk="$1" disk_type="$2"
   local model_family='' device_model='' serial_number='' fw_version='' vendor='' product='' revision='' lun_id=''
-  while read line; do
+  while read -r line; do
     info_type="$(echo "${line}" | cut -f1 -d: | tr ' ' '_')"
     info_value="$(echo "${line}" | cut -f2- -d: | sed 's/^ \+//g' | sed 's/"/\\"/')"
     case "${info_type}" in
@@ -201,6 +211,7 @@ format_output() {
     awk -F'{' "${output_format_awk}"
 }
 
+main() {
 smartctl_version="$(/usr/sbin/smartctl -V | head -n1 | awk '$1 == "smartctl" {print $2}')"
 
 echo "smartctl_version{version=\"${smartctl_version}\"} 1" | format_output
@@ -212,8 +223,8 @@ fi
 device_list="$(/usr/sbin/smartctl --scan-open | awk '/^\/dev/{print $1 "|" $3}')"
 
 for device in ${device_list}; do
-  disk="$(echo ${device} | cut -f1 -d'|')"
-  type="$(echo ${device} | cut -f2 -d'|')"
+  disk="$(echo "${device}" | cut -f1 -d'|')"
+  type="$(echo "${device}" | cut -f2 -d'|')"
   active=1
   echo "smartctl_run{disk=\"${disk}\",type=\"${type}\"}" "$(TZ=UTC date '+%s')"
   # Check if the device is in a low-power mode
@@ -224,7 +235,9 @@ for device in ${device_list}; do
   # Get the SMART information and health
   /usr/sbin/smartctl -i -H -d "${type}" "${disk}" | parse_smartctl_info "${disk}" "${type}"
   # Get the SMART attributes
+  echo "${type}"
   case ${type} in
+  # Actual command where the metrics are parsed from
   sat) /usr/sbin/smartctl -A -d "${type}" "${disk}" | parse_smartctl_attributes "${disk}" "${type}" ;;
   sat+megaraid*) /usr/sbin/smartctl -A -d "${type}" "${disk}" | parse_smartctl_attributes "${disk}" "${type}" ;;
   scsi) /usr/sbin/smartctl -A -d "${type}" "${disk}" | parse_smartctl_scsi_attributes "${disk}" "${type}" ;;
@@ -236,3 +249,6 @@ for device in ${device_list}; do
     ;;
   esac
 done | format_output
+}
+
+main
