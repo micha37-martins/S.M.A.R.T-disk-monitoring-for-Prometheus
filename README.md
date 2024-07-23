@@ -9,8 +9,13 @@ https://grafana.com/dashboards/10530
 https://grafana.com/dashboards/10531
 
 ## Purpose
-This text_collector is a customized version of the S.M.A.R.T. `text_collector` example from `node_exporter` github repo:
+This text_collector is a customized version of the S.M.A.R.T. `text_collector`
+example from `node_exporter` github repo:
 https://github.com/prometheus/node_exporter/tree/master/text_collector_examples
+
+This bash script uses `smartctl` to get S.M.A.R.T. values. It is designed to
+work with SATA and NVME disks. It should also work with SCSI disks but is not
+tested.
 
 ## Requirements
 - Prometheus
@@ -36,6 +41,7 @@ Example for UBUNTU `crontab -e`:
 
 `*/5 * * * * /usr/local/bin/smartmon.sh > /var/lib/node_exporter/textfile_collector/smart_metrics.prom`
 
+# TODO: adapt to new script
 ## How to add specific S.M.A.R.T. attributes
 If you are missing some attributes you can extend the text_collector.
 Add the desired attributes to `smartmon_attrs` array in `smartmon.sh`.
@@ -70,5 +76,8 @@ https://www.smartmontools.org/wiki/Download#Installfromthesourcetarball
 
 
 ## Tests
-To do tests install bats (bats-core):
+# TODO: tests install bats (bats-core):
 [bats-tutorial](https://bats-core.readthedocs.io/en/stable/tutorial.html)
+
+## TODO
+- Proper implementation and tets for SCSI type disks. Please provide input if interested.
