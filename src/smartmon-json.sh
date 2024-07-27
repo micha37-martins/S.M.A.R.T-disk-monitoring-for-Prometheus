@@ -27,47 +27,6 @@ ensure_jq_installed() {
 #   $1 - Disk name
 #   $2 - Disk type
 #   $3 - JSON string containing SMART information
-parse_smartctl_info_json_old() {
-  local disk="$1"
-  local disk_type="$2"
-  local json="$3"
-  local labels="disk=\"${disk}\",type=\"${disk_type}\""
-
-  # Extract various SMART attributes using jq
-  local model_family device_model serial_number fw_version vendor product \
-    revision lun_id smart_available smart_enabled smart_healthy
-  model_family=$(echo "$json" | jq -r '.model_family // empty')
-  device_model=$(echo "$json" | jq -r '.device_model // empty')
-  serial_number=$(echo "$json" | jq -r '.serial_number // empty')
-  fw_version=$(echo "$json" | jq -r '.firmware_version // empty')
-  vendor=$(echo "$json" | jq -r '.vendor // empty')
-  product=$(echo "$json" | jq -r '.product // empty')
-  revision=$(echo "$json" | jq -r '.revision // empty')
-  lun_id=$(echo "$json" | jq -r '.lun_id // empty')
-  smart_available=$(echo "$json" | jq -r '.smart_support.is_available // 0')
-  smart_enabled=$(echo "$json" | jq -r '.smart_support.is_enabled // 0')
-  smart_healthy=$(echo "$json" | jq -r '.smart_status.passed // 0')
-
-  # Print the extracted information in Prometheus format
-  # Note: use TABS for indentation
-  device_infos=$(cat <<-EOF
-device_info{${labels},\
-vendor="${vendor}",\
-product="${product}",\
-revision="${revision}",\
-lun_id="${lun_id}",\
-model_family="${model_family}",\
-device_model="${device_model}",\
-serial_number="${serial_number}",\
-firmware_version="${fw_version}"} 1
-EOF
-)
-  echo "$device_infos"
-  echo "device_smart_available{${labels}} ${smart_available}"
-  echo "device_smart_enabled{${labels}} ${smart_enabled}"
-  echo "device_smart_healthy{${labels}} ${smart_healthy}"
-}
-
 parse_smartctl_info_json() {
   local disk="$1"
   local disk_type="$2"
@@ -76,7 +35,6 @@ parse_smartctl_info_json() {
 
   declare -a keys_general=("model_family" "device_model" "serial_number" "firmware_version" "vendor" "product" "revision" "lun_id")
   declare -a keys_binary=("smart_support.is_available" "smart_support.is_enabled" "smart_status.passed")
-
 
   # Print the extracted information in Prometheus format
   # Note: use TABS for indentation
@@ -93,20 +51,10 @@ done
 device_infos_jsonized=${device_infos%,}
 
   echo "$device_infos_jsonized""}" "1"
-#  smart_available=$(echo "$json" | jq -r '.smart_support.is_available // 0')
-#  smart_enabled=$(echo "$json" | jq -r '.smart_support.is_enabled // 0')
-#  smart_healthy=$(echo "$json" | jq -r '.smart_status.passed // 0')
-#  echo "device_smart_available{${labels}} ${smart_available}"
-#  echo "device_smart_enabled{${labels}} ${smart_enabled}"
-#  echo "device_smart_healthy{${labels}} ${smart_healthy}"
 for key in "${keys_binary[@]}"; do
   value="$(jq -r ."$key // 0" <<< "$json")"
   echo "$(echo "$key" | tr '.' '_'){${labels}} ${value}"
 done
-
-# echo "device_smart_available{${labels}} ${smart_available}"
-# echo "device_smart_enabled{${labels}} ${smart_enabled}"
-# echo "device_smart_healthy{${labels}} ${smart_healthy}"
 }
 
 # Parse and extract ATA SMART attributes from the provided JSON.
@@ -240,10 +188,9 @@ format_output() {
     awk -F'{' "${format_output_awk}"
 }
 
-# Main function to orchestrate the script.
-main() {
-  ensure_jq_installed
-
+# Get the smartctl version and output it in Prometheus format.
+# Exits if version is too old.
+output_smartctl_version() {
   # Get the smartctl version
   local smartctl_version
   smartctl_version=$(/usr/sbin/smartctl -V | head -n1 | awk '$1 == "smartctl" {print $2}')
@@ -253,8 +200,16 @@ main() {
 
   # Exit if smartctl version is less than 6
   if [[ "$(expr "${smartctl_version}" : '\([0-9]*\)\..*')" -lt 6 ]]; then
-    exit
+    echo "Error: smartctl version is less than 6." >&2
+    exit 1
   fi
+}
+
+# Main function to orchestrate the script.
+main() {
+  ensure_jq_installed
+
+  output_smartctl_version
 
   # Get the list of devices
   local device_list
