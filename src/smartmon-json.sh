@@ -9,9 +9,6 @@
 # different vendors might use inconsistent value naming.
 
 
-# Global Variables
-device_infos=""
-
 # Ensure jq is installed. This function checks if the 'jq' command is available.
 ensure_jq_installed() {
   if ! command -v jq &>/dev/null; then
@@ -28,6 +25,7 @@ ensure_jq_installed() {
 #   $2 - Disk type
 #   $3 - JSON string containing SMART information
 parse_smartctl_info_json() {
+  local device_infos=""
   local disk="$1"
   local disk_type="$2"
   local json="$3"
@@ -205,6 +203,72 @@ output_smartctl_version() {
   fi
 }
 
+# Check if a storage device is active.
+# Arguments:
+#   $1 - Disk name
+#   $2 - Disk type
+# Returns 0 if the device is active, and a non-zero value otherwise.
+is_device_active() {
+  local disk=$1
+  local type=$2
+  /usr/sbin/smartctl -n standby -d "${type}" "${disk}" > /dev/null
+}
+
+# This function processes a single storage device.
+# Arguments:
+#   $1 - Disk name
+#   $2 - Disk type
+# Performed operations:
+# - Record the time of the smartctl run
+# - Check if the device is active
+# - Skip inactive devices
+# - Get and parses SMART information
+# - Get and parses SMART attributes
+# Returns nothing
+process_device() {
+  local disk=$1
+  local type=$2
+  local active=1
+
+  # Record the time of smartctl run
+  echo "smartctl_run{disk=\"${disk}\",type=\"${type}\"}" "$(TZ=UTC date '+%s')"
+
+  # Check if the device is active
+  if is_device_active "${disk}" "${type}"; then
+    active=1
+  else
+    active=0
+  fi
+  echo "device_active{disk=\"${disk}\",type=\"${type}\"}" "${active}"
+
+  # Skip inactive devices
+  test ${active} -eq 0 && return
+
+  # Get and parse SMART information
+  local info_json
+  info_json=$(/usr/sbin/smartctl -i -H -j -d "${type}" "${disk}")
+  parse_smartctl_info_json "${disk}" "${type}" "${info_json}"
+
+  # Get and parse SMART attributes
+  local attributes_json
+  attributes_json=$(/usr/sbin/smartctl -A -j -d "${type}" "${disk}")
+  case ${type} in
+    sat|sat+megaraid*)
+      parse_smartctl_attributes_json "${disk}" "${type}" "${attributes_json}"
+      ;;
+    scsi|megaraid*)
+      parse_smartctl_scsi_attributes_json "${disk}" "${type}" "${attributes_json}"
+      ;;
+    nvme)
+      parse_smartctl_nvme_attributes_json "${disk}" "${type}" "${attributes_json}"
+      ;;
+    *)
+      echo "disk type is not supported: ${type}"
+      exit 1
+      ;;
+  esac
+}
+
 # Main function to orchestrate the script.
 main() {
   ensure_jq_installed
@@ -217,44 +281,10 @@ main() {
 
   # Iterate over each device and gather SMART information
   for device in ${device_list}; do
-    local disk
-    local type
-    disk=$(echo "${device}" | cut -f1 -d'|')
-    type=$(echo "${device}" | cut -f2 -d'|')
-    local active=1
+    local disk; disk=$(echo "${device}" | cut -f1 -d'|')
+    local type; type=$(echo "${device}" | cut -f2 -d'|')
 
-    # Record the time of smartctl run
-    echo "smartctl_run{disk=\"${disk}\",type=\"${type}\"}" "$(TZ=UTC date '+%s')"
-    # Check if the device is active
-    /usr/sbin/smartctl -n standby -d "${type}" "${disk}" > /dev/null || active=0
-    echo "device_active{disk=\"${disk}\",type=\"${type}\"}" "${active}"
-
-    # Skip inactive devices
-    test ${active} -eq 0 && continue
-
-    # Get and parse SMART information
-    local info_json
-    info_json=$(/usr/sbin/smartctl -i -H -j -d "${type}" "${disk}")
-    parse_smartctl_info_json "${disk}" "${type}" "${info_json}"
-
-    # Get and parse SMART attributes
-    local attributes_json
-    attributes_json=$(/usr/sbin/smartctl -A -j -d "${type}" "${disk}")
-    case ${type} in
-      sat|sat+megaraid*)
-        parse_smartctl_attributes_json "${disk}" "${type}" "${attributes_json}"
-        ;;
-      scsi|megaraid*)
-        parse_smartctl_scsi_attributes_json "${disk}" "${type}" "${attributes_json}"
-        ;;
-      nvme)
-        parse_smartctl_nvme_attributes_json "${disk}" "${type}" "${attributes_json}"
-        ;;
-      *)
-        echo "disk type is not supported: ${type}"
-        exit 1
-        ;;
-    esac
+    process_device "${disk}" "${type}"
   done | format_output
 }
 
