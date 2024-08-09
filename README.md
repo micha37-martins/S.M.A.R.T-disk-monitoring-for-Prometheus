@@ -37,7 +37,7 @@ For UBUNTU: `sudo apt-get install smartmontools`
 To enable the text_collector on your system add the following as cronjob.
 It will execute the script every five minutes and save the result to the `text_collector` directory.
 
-Example for UBUNTU `crontab -e`:
+Example for UBUNTU `sudo crontab -e`:
 
 `*/5 * * * * /usr/local/bin/smartmon.sh > /var/lib/node_exporter/textfile_collector/smart_metrics.prom`
 

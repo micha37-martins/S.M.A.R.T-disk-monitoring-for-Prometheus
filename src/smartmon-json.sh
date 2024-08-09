@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+# TODO: remove json postfix
+# TODO: warning breaking changes
+# TODO: test tolowercase
+# - Renaming
+# - JSON
+# - Drop SCSI
+
 # This script is designed to collect SMART data from various types of
 # disks (ATA, NVMe, SCSI) and format it for Prometheus monitoring.
 # Be aware that SCSI type is not tested!
@@ -9,7 +16,7 @@
 # different vendors might use inconsistent value naming.
 
 
-# Ensure jq is installed. This function checks if the 'jq' command is available.
+# Check if the 'jq' command is available.
 ensure_jq_installed() {
   if ! command -v jq &>/dev/null; then
     echo "jq could not be found. Please install it:"
@@ -31,7 +38,7 @@ parse_smartctl_info_json() {
   local json="$3"
   local labels="disk=\"${disk}\",type=\"${disk_type}\""
 
-  declare -a keys_general=("model_family" "device_model" "serial_number" "firmware_version" "vendor" "product" "revision" "lun_id")
+  declare -a keys_general=("model_family" "model_name" "device_model" "serial_number" "firmware_version" "vendor" "product" "revision" "lun_id")
   declare -a keys_binary=("smart_support.is_available" "smart_support.is_enabled" "smart_status.passed")
 
   # Print the extracted information in Prometheus format
@@ -48,9 +55,16 @@ done
 # Remove the last comma
 device_infos_jsonized=${device_infos%,}
 
-  echo "$device_infos_jsonized""}" "1"
+echo "$device_infos_jsonized""}" "1"
+
 for key in "${keys_binary[@]}"; do
   value="$(jq -r ."$key // 0" <<< "$json")"
+  # Convert boolean to numeric
+  if [ "$value" == "true" ]; then
+    value=1
+  elif [ "$value" == "false" ]; then
+    value=0
+  fi
   echo "$(echo "$key" | tr '.' '_'){${labels}} ${value}"
 done
 }
@@ -75,21 +89,63 @@ parse_smartctl_attributes_json() {
   # Extract and format SMART attributes using jq
   echo "$json" | jq -r '
     .ata_smart_attributes.table[] |
-    select(.id and .name and (.value | type != "array") and (.worst | type != "array") and (.thresh | type != "array") and (.raw.value | type != "array")) |
+    select(
+      .id and
+      .name and
+      (.value | type != "array") and
+      (.worst | type != "array") and
+      (.thresh | type != "array") and
+      (.raw.value | type != "array")
+    ) |
     [
       .id,
       (.name | gsub("-"; "_")),
       .value,
       .worst,
       .thresh,
-      .raw.value
+      (.raw.string | capture("(?<num>^[0-9]+)") | .num)
     ] | @tsv
   ' | while IFS=$'\t' read -r id name value worst thresh raw; do
-    echo "${name}_value{${labels},smart_id=\"${id}\"} ${value}"
-    echo "${name}_worst{${labels},smart_id=\"${id}\"} ${worst}"
-    echo "${name}_threshold{${labels},smart_id=\"${id}\"} ${thresh}"
-    echo "${name}_raw_value{${labels},smart_id=\"${id}\"} ${raw}"
+
+    local metric_name
+
+    metric_name="${name}_value"
+    printf "%s{%s,smart_id=\"%s\"} %s\n" \
+      "$(echo "$metric_name" | awk '{print tolower($0)}')" \
+      "$labels" \
+      "$id" \
+      "$value"
+
+    metric_name="${name}_worst"
+    printf "%s{%s,smart_id=\"%s\"} %s\n" \
+      "$(echo "$metric_name" | awk '{print tolower($0)}')" \
+      "$labels" \
+      "$id" \
+      "$worst"
+
+    metric_name="${name}_threshold"
+    printf "%s{%s,smart_id=\"%s\"} %s\n" \
+      "$(echo "$metric_name" | awk '{print tolower($0)}')" \
+      "$labels" \
+      "$id" \
+      "$thresh"
+
+    metric_name="${name}_raw_value"
+    printf "%s{%s,smart_id=\"%s\"} %s\n" \
+      "$(echo "$metric_name" | awk '{print tolower($0)}')" \
+      "$labels" \
+      "$id" \
+      "$raw"
   done
+
+  # Extract and format temperature
+  local temperature
+  temperature=$(echo "$json" | jq -r '.temperature.current // empty')
+
+  if [[ -n "$temperature" ]]; then
+    printf "temperature_current{%s} %s\n" "$labels" "$temperature"
+  fi
+
 }
 
 # Parse and extract NVMe SMART attributes from the provided JSON.
@@ -119,46 +175,8 @@ parse_smartctl_nvme_attributes_json() {
       .value
     ] | @tsv
   ' | while IFS=$'\t' read -r key value; do
-    echo "${key}{${labels}} ${value}"
-  done
-}
-
-# Parse and extract SCSI SMART attributes from the provided JSON.
-# The function extracts various fields and prints them in a formatted manner.
-# Arguments:
-#   $1 - Disk name
-#   $2 - Disk type
-#   $3 - JSON string containing SCSI SMART attributes
-parse_smartctl_scsi_attributes_json() {
-  local disk="$1"
-  local disk_type="$2"
-  local json="$3"
-  local labels="disk=\"${disk}\",type=\"${disk_type}\""
-
-  # Extract and format SCSI SMART attributes using jq
-  echo "$json" | jq -r '
-    [
-      {key: "power_on_hours", value: .scsi_grown_defects_count},
-      {key: "Current_Drive_Temperature", value: .temperature.current},
-      {key: "Accumulated_start-stop_cycles", value: .accumulated_start_stop_cycles},
-      {key: "Unsafe_Shutdowns", value: .unsafe_shutdowns},
-      {key: "Power_Cycles", value: .power_cycles},
-      {key: "Power_On_Hours", value: .power_on_hours},
-      {key: "Host_Read_Commands", value: .host_read_commands},
-      {key: "Host_Write_Commands", value: .host_write_commands},
-      {key: "Controller_Busy_Time", value: .controller_busy_time},
-      {key: "Error_Information_Log_Entries", value: .error_information_log_entries},
-      {key: "Temperature", value: .temperature},
-      {key: "Percentage_Used", value: .percentage_used},
-      {key: "Available_Spare", value: .available_spare},
-      {key: "Available_Spare_Threshold", value: .available_spare_threshold},
-      {key: "Media_and_Data_Integrity_Errors", value: .media_and_data_integrity_errors}
-    ] |
-    map(select(.value != null and (.value | type != "array"))) |
-    .[] |
-    "\(.key){${labels}} \(.value)"
-  ' | while IFS=$'\t' read -r key value; do
-    echo "${key}{${labels}} ${value}"
+    local metric_name="${key}"
+    echo "$(echo "${metric_name}" | awk '{print tolower($0)}'){${labels}} ${value}"
   done
 }
 
@@ -231,7 +249,8 @@ process_device() {
   local active=1
 
   # Record the time of smartctl run
-  echo "smartctl_run{disk=\"${disk}\",type=\"${type}\"}" "$(TZ=UTC date '+%s')"
+  local metric_name="smartctl_run"
+  echo "$(echo "${metric_name}" | awk '{print tolower($0)}'){disk=\"${disk}\",type=\"${type}\"}" "$(TZ=UTC date '+%s')"
 
   # Check if the device is active
   if is_device_active "${disk}" "${type}"; then
@@ -239,7 +258,9 @@ process_device() {
   else
     active=0
   fi
-  echo "device_active{disk=\"${disk}\",type=\"${type}\"}" "${active}"
+  metric_name="device_active"
+  # make metric names lowercase
+  echo "$(echo "${metric_name}" | awk '{print tolower($0)}'){disk=\"${disk}\",type=\"${type}\"}" "${active}"
 
   # Skip inactive devices
   test ${active} -eq 0 && return
@@ -255,9 +276,6 @@ process_device() {
   case ${type} in
     sat|sat+megaraid*)
       parse_smartctl_attributes_json "${disk}" "${type}" "${attributes_json}"
-      ;;
-    scsi|megaraid*)
-      parse_smartctl_scsi_attributes_json "${disk}" "${type}" "${attributes_json}"
       ;;
     nvme)
       parse_smartctl_nvme_attributes_json "${disk}" "${type}" "${attributes_json}"

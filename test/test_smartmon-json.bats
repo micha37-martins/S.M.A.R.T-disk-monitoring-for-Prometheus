@@ -97,10 +97,10 @@ EOF
 
   run run_parse_smartctl_attributes_json "$disk" "$disk_type" "$test_json"
   assert_output - <<-EOF
-		Power_On_Hours_value{disk="sda",type="sat",smart_id="9"} 100
-		Power_On_Hours_worst{disk="sda",type="sat",smart_id="9"} 100
-		Power_On_Hours_threshold{disk="sda",type="sat",smart_id="9"} 50
-		Power_On_Hours_raw_value{disk="sda",type="sat",smart_id="9"} 30839
+		power_on_hours_value{disk="sda",type="sat",smart_id="9"} 100
+		power_on_hours_worst{disk="sda",type="sat",smart_id="9"} 100
+		power_on_hours_threshold{disk="sda",type="sat",smart_id="9"} 50
+		power_on_hours_raw_value{disk="sda",type="sat",smart_id="9"} 30839
 EOF
 }
 
@@ -141,10 +141,10 @@ EOF
 
   run run_parse_smartctl_attributes_json "$disk" "$disk_type" "$test_json"
   assert_output - <<-EOF
-		Power_On_Hours_value{disk="sda",type="sat",smart_id="9"} 100
-		Power_On_Hours_worst{disk="sda",type="sat",smart_id="9"} 100
-		Power_On_Hours_threshold{disk="sda",type="sat",smart_id="9"} 50
-		Power_On_Hours_raw_value{disk="sda",type="sat",smart_id="9"} 30839
+		power_on_hours_value{disk="sda",type="sat",smart_id="9"} 100
+		power_on_hours_worst{disk="sda",type="sat",smart_id="9"} 100
+		power_on_hours_threshold{disk="sda",type="sat",smart_id="9"} 50
+		power_on_hours_raw_value{disk="sda",type="sat",smart_id="9"} 30839
 EOF
 }
 
@@ -154,6 +154,7 @@ EOF
   local json='{
     "vendor": "NorthernDigital",
     "model_family": "JBOD-Star",
+    "model_name": "Star-Light",
     "product": "ND-01",
     "revision": "10.01",
     "lun_id": "0",
@@ -169,7 +170,7 @@ EOF
     }
   }'
 
-  local expected_output="device_info{disk=\"${disk}\",type=\"${disk_type}\",model_family=\"JBOD-Star\",device_model=\"ND-01Model\",serial_number=\"123456789\",firmware_version=\"80.00A80\",vendor=\"NorthernDigital\",product=\"ND-01\",revision=\"10.01\",lun_id=\"0\"} 1
+  local expected_output="device_info{disk=\"${disk}\",type=\"${disk_type}\",model_family=\"JBOD-Star\",model_name=\"Star-Light\",device_model=\"ND-01Model\",serial_number=\"123456789\",firmware_version=\"80.00A80\",vendor=\"NorthernDigital\",product=\"ND-01\",revision=\"10.01\",lun_id=\"0\"} 1
 smart_support_is_available{disk=\"${disk}\",type=\"${disk_type}\"} 1
 smart_support_is_enabled{disk=\"${disk}\",type=\"${disk_type}\"} 1
 smart_status_passed{disk=\"${disk}\",type=\"${disk_type}\"} 1"
@@ -178,4 +179,90 @@ smart_status_passed{disk=\"${disk}\",type=\"${disk_type}\"} 1"
   output=$(parse_smartctl_info_json "${disk}" "${disk_type}" "${json}")
 
   assert_equal "${output}" "${expected_output}"
+}
+
+
+@test "parse_smartctl_sata_attributes_json handle string temperature value" {
+  local disk="sda"
+  local disk_type="sat"
+  local test_json
+  local test_json='{
+  "json_format_version": [
+    1,
+    0
+  ],
+  "ata_smart_attributes": {
+    "table": [
+      {
+        "id": 194,
+        "name": "Temperature_Celsius",
+        "value": 69,
+        "worst": 40,
+        "thresh": 50,
+        "when_failed": "past",
+        "flags": {
+          "value": 34,
+          "string": "-O---K ",
+          "prefailure": false,
+          "updated_online": true,
+          "performance": false,
+          "error_rate": false,
+          "event_count": false,
+          "auto_keep": true
+        },
+        "raw": {
+          "value": 257699676191,
+          "string": "31 (Min/Max 25/60)"
+        }
+      }
+    ]
+  }
+}'
+
+  run run_parse_smartctl_attributes_json "$disk" "$disk_type" "$test_json"
+  assert_output - <<-EOF
+		temperature_celsius_value{disk="sda",type="sat",smart_id="194"} 69
+		temperature_celsius_worst{disk="sda",type="sat",smart_id="194"} 40
+		temperature_celsius_threshold{disk="sda",type="sat",smart_id="194"} 50
+		temperature_celsius_raw_value{disk="sda",type="sat",smart_id="194"} 31
+EOF
+}
+
+@test "parse_smartctl_sata_attributes_json parse temperature value" {
+  local disk="sda"
+  local disk_type="sat"
+  local test_json
+  local test_json='{
+  "json_format_version": [
+    1,
+    0
+  ],
+  "ata_smart_attributes": {
+    "table": [
+      {
+        "id": 194,
+        "name": "Temperature_Celsius",
+        "value": 69,
+        "worst": 40,
+        "thresh": 50,
+        "raw": {
+          "value": 257699676191,
+          "string": "31 (Min/Max 25/60)"
+        }
+      }
+    ]
+  },
+  "temperature": {
+    "current": 31
+  }
+}'
+
+  run run_parse_smartctl_attributes_json "$disk" "$disk_type" "$test_json"
+  assert_output - <<-EOF
+		temperature_celsius_value{disk="sda",type="sat",smart_id="194"} 69
+		temperature_celsius_worst{disk="sda",type="sat",smart_id="194"} 40
+		temperature_celsius_threshold{disk="sda",type="sat",smart_id="194"} 50
+		temperature_celsius_raw_value{disk="sda",type="sat",smart_id="194"} 31
+		temperature_current{disk="sda",type="sat"} 31
+EOF
 }
