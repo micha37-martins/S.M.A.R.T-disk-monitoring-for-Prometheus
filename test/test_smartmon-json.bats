@@ -50,11 +50,12 @@ run_parse_smartctl_attributes_json() {
 @test "parse_smartctl_nvme_attributes_json data_units_written" {
   local disk="nvme0"
   local disk_type="nvme"
-  local test_data='{"nvme_smart_health_information_log": {"data_units_written": 3958438}}'
+  local test_data='{"nvme_smart_health_information_log": {"data_units_written": 4211733}}'
 
   run run_parse_smartctl_nvme_attributes_json "$disk" "$disk_type" "$test_data"
   assert_output - <<-EOF
-data_units_written{disk="nvme0",type="nvme"} 3958438
+written_bytes{disk="nvme0",type="nvme"} 2156407296000
+data_units_written{disk="nvme0",type="nvme"} 4211733
 EOF
 }
 

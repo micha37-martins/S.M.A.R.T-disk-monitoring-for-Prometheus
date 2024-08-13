@@ -48,25 +48,25 @@ device_info{${labels},
 EOF
 )
 
-for key in "${keys_general[@]}"; do
-  device_infos+="$key="\"$(jq -r --arg key "$key" '.[$key] // empty' <<< "$json")\"\,
-done
+  for key in "${keys_general[@]}"; do
+    device_infos+="$key="\"$(jq -r --arg key "$key" '.[$key] // empty' <<< "$json")\"\,
+  done
 
-# Remove the last comma
-device_infos_jsonized=${device_infos%,}
+  # Remove the last comma
+  device_infos_jsonized=${device_infos%,}
 
-echo "$device_infos_jsonized""}" "1"
+  echo "$device_infos_jsonized""}" "1"
 
-for key in "${keys_binary[@]}"; do
-  value="$(jq -r ."$key // 0" <<< "$json")"
-  # Convert boolean to numeric
-  if [ "$value" == "true" ]; then
-    value=1
-  elif [ "$value" == "false" ]; then
-    value=0
-  fi
-  echo "$(echo "$key" | tr '.' '_'){${labels}} ${value}"
-done
+  for key in "${keys_binary[@]}"; do
+    value="$(jq -r ."$key // 0" <<< "$json")"
+    # Convert boolean to numeric
+    if [ "$value" == "true" ]; then
+      value=1
+    elif [ "$value" == "false" ]; then
+      value=0
+    fi
+    echo "$(echo "$key" | tr '.' '_'){${labels}} ${value}"
+  done
 }
 
 # Parse and extract ATA SMART attributes from the provided JSON.
@@ -154,6 +154,31 @@ parse_smartctl_attributes_json() {
 #   $1 - Disk name
 #   $2 - Disk type
 #   $3 - JSON string containing NVMe SMART attributes
+#parse_smartctl_nvme_attributes_json() {
+#  local disk="$1"
+#  local disk_type="$2"
+#  local json="$3"
+#  local labels="disk=\"${disk}\",type=\"${disk_type}\""
+#
+#  # return early if no input
+#  if [ "$json" == {} ]; then
+#    return 0
+#  fi
+#
+#  # Extract and format NVMe SMART attributes using jq
+#  echo "$json" | jq -r '
+#    .nvme_smart_health_information_log |
+#    to_entries[] |
+#    select(.key and (.value | type != "array")) |
+#    [
+#      (.key | gsub("-"; "_")),
+#      .value
+#    ] | @tsv
+#  ' | while IFS=$'\t' read -r key value; do
+#    local metric_name="${key}"
+#    echo "$(echo "${metric_name}" | awk '{print tolower($0)}'){${labels}} ${value}"
+#  done
+#}
 parse_smartctl_nvme_attributes_json() {
   local disk="$1"
   local disk_type="$2"
@@ -176,6 +201,13 @@ parse_smartctl_nvme_attributes_json() {
     ] | @tsv
   ' | while IFS=$'\t' read -r key value; do
     local metric_name="${key}"
+    # Data Units Written: Represents the number of 512-byte data units written.
+    # It is reported as thousends 1 = 1000 units of 512 bytes)
+    # Block-sizes different from 512 will be converted to 512
+    if [ "${metric_name}" == "data_units_written" ]; then
+      local written_bytes=$((value * 512 *1000))
+      echo "written_bytes{${labels}} ${written_bytes}"
+    fi
     echo "$(echo "${metric_name}" | awk '{print tolower($0)}'){${labels}} ${value}"
   done
 }
@@ -267,7 +299,7 @@ process_device() {
 
   # Get and parse SMART information
   local info_json
-  info_json=$(/usr/sbin/smartctl -i -H -j -d "${type}" "${disk}")
+  info_json=$(/usr/sbin/smartctl -i -j -d "${type}" "${disk}")
   parse_smartctl_info_json "${disk}" "${type}" "${info_json}"
 
   # Get and parse SMART attributes
@@ -275,6 +307,7 @@ process_device() {
   attributes_json=$(/usr/sbin/smartctl -A -j -d "${type}" "${disk}")
   case ${type} in
     sat|sat+megaraid*)
+    # TODO: continue integrating block size if available from json info and multiply with lbs_written if avail
       parse_smartctl_attributes_json "${disk}" "${type}" "${attributes_json}"
       ;;
     nvme)
