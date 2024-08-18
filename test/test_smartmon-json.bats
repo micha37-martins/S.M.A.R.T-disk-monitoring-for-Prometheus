@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 
 setup() {
+  export BATS_RUN_SKIP=true  # used to detect that script is tested not run
   load 'test_helper/bats-assert/load'
   load 'test_helper/bats-support/load'
   load '../src/smartmon-json.sh'
@@ -22,9 +23,10 @@ run_parse_smartctl_nvme_attributes_json() {
 run_parse_smartctl_attributes_json() {
   local disk="$1"
   local disk_type="$2"
-  local test_data="$3"
+  local sector_size="$3"
+  local test_data="$4"
   # echo "$test_data" | parse_smartctl_attributes_json "$disk" "$disk_type"
-  parse_smartctl_attributes_json "$disk" "$disk_type" "$test_data"
+  parse_smartctl_attributes_json "$disk" "$disk_type" "$sector_size" "$test_data"
 }
 ### End Helper Functions ###
 
@@ -59,9 +61,58 @@ data_units_written{disk="nvme0",type="nvme"} 4211733
 EOF
 }
 
+@test "parse_smartctl_sata_attributes_json sat written_bytes" {
+  local disk="sda"
+  local disk_type="sat"
+  local sector_size="512"
+  local test_json
+  local test_json='{
+  "json_format_version": [
+    1,
+    0
+  ],
+  "ata_smart_attributes": {
+    "table": [
+      {
+        "id": 246,
+        "name": "Total_LBAs_Written",
+        "value": 100,
+        "worst": 100,
+        "thresh": 50,
+        "when_failed": "",
+        "flags": {
+          "value": 50,
+          "string": "-O--CK ",
+          "prefailure": false,
+          "updated_online": true,
+          "performance": false,
+          "error_rate": false,
+          "event_count": true,
+          "auto_keep": true
+        },
+        "raw": {
+          "value": 9525606174,
+          "string": "9525606174"
+        }
+      }
+    ]
+  }
+}'
+
+  run run_parse_smartctl_attributes_json "$disk" "$disk_type" "$sector_size" "$test_json"
+  assert_output - <<-EOF
+		total_lbas_written_value{disk="sda",type="sat",smart_id="246"} 100
+		total_lbas_written_worst{disk="sda",type="sat",smart_id="246"} 100
+		total_lbas_written_threshold{disk="sda",type="sat",smart_id="246"} 50
+		total_lbas_written_raw_value{disk="sda",type="sat",smart_id="246"} 9525606174
+		written_bytes{disk="sda",type="sat"} 4877110361088
+EOF
+}
+
 @test "parse_smartctl_sata_attributes_json power_on_hours" {
   local disk="sda"
   local disk_type="sat"
+  local sector_size="512"
   local test_json
   local test_json='{
   "json_format_version": [
@@ -96,7 +147,7 @@ EOF
   }
 }'
 
-  run run_parse_smartctl_attributes_json "$disk" "$disk_type" "$test_json"
+  run run_parse_smartctl_attributes_json "$disk" "$disk_type" "$sector_size" "$test_json"
   assert_output - <<-EOF
 		power_on_hours_value{disk="sda",type="sat",smart_id="9"} 100
 		power_on_hours_worst{disk="sda",type="sat",smart_id="9"} 100
@@ -108,15 +159,17 @@ EOF
 @test "parse_smartctl_sata_attributes_json invalid data" {
   local disk="sda"
   local disk_type="sat"
+  local sector_size="512"
   local test_data='{}'
 
-  run run_parse_smartctl_attributes_json "$disk" "$disk_type" "$test_data"
+  run run_parse_smartctl_attributes_json "$disk" "$disk_type" "$sector_size" "$test_data"
   assert_output ""
 }
 
 @test "parse_smartctl_sata_attributes_json replace hyphens" {
   local disk="sda"
   local disk_type="sat"
+  local sector_size="512"
   local test_json
   local test_json='{
   "json_format_version": [
@@ -140,7 +193,7 @@ EOF
   }
 }'
 
-  run run_parse_smartctl_attributes_json "$disk" "$disk_type" "$test_json"
+  run run_parse_smartctl_attributes_json "$disk" "$disk_type" "$sector_size" "$test_json"
   assert_output - <<-EOF
 		power_on_hours_value{disk="sda",type="sat",smart_id="9"} 100
 		power_on_hours_worst{disk="sda",type="sat",smart_id="9"} 100
@@ -186,6 +239,7 @@ smart_status_passed{disk=\"${disk}\",type=\"${disk_type}\"} 1"
 @test "parse_smartctl_sata_attributes_json handle string temperature value" {
   local disk="sda"
   local disk_type="sat"
+  local sector_size="512"
   local test_json
   local test_json='{
   "json_format_version": [
@@ -220,7 +274,7 @@ smart_status_passed{disk=\"${disk}\",type=\"${disk_type}\"} 1"
   }
 }'
 
-  run run_parse_smartctl_attributes_json "$disk" "$disk_type" "$test_json"
+  run run_parse_smartctl_attributes_json "$disk" "$disk_type" "$sector_size" "$test_json"
   assert_output - <<-EOF
 		temperature_celsius_value{disk="sda",type="sat",smart_id="194"} 69
 		temperature_celsius_worst{disk="sda",type="sat",smart_id="194"} 40
@@ -232,6 +286,7 @@ EOF
 @test "parse_smartctl_sata_attributes_json parse temperature value" {
   local disk="sda"
   local disk_type="sat"
+  local sector_size="512"
   local test_json
   local test_json='{
   "json_format_version": [
@@ -258,7 +313,7 @@ EOF
   }
 }'
 
-  run run_parse_smartctl_attributes_json "$disk" "$disk_type" "$test_json"
+  run run_parse_smartctl_attributes_json "$disk" "$disk_type" "$sector_size" "$test_json"
   assert_output - <<-EOF
 		temperature_celsius_value{disk="sda",type="sat",smart_id="194"} 69
 		temperature_celsius_worst{disk="sda",type="sat",smart_id="194"} 40

@@ -15,6 +15,14 @@
 # all elements from the JSON output of smartctl this seems more robust as
 # different vendors might use inconsistent value naming.
 
+# Check if this script is run as root
+# Do not exit if test is run by bats
+check_root() {
+    if [ "$EUID" -ne 0 ] && [ -z "$BATS_RUN_SKIP" ]; then
+        echo "This script must be run as root"
+        exit 1
+    fi
+}
 
 # Check if the 'jq' command is available.
 ensure_jq_installed() {
@@ -75,10 +83,12 @@ EOF
 #   $1 - Disk name
 #   $2 - Disk type
 #   $3 - JSON string containing SMART attributes
+#   $4 - Sector size for calculating written_bytes
 parse_smartctl_attributes_json() {
   local disk="$1"
   local disk_type="$2"
-  local json="$3"
+  local sector_size="$3"
+  local json="$4"
   local labels="disk=\"${disk}\",type=\"${disk_type}\""
 
   # return early if no input
@@ -136,6 +146,12 @@ parse_smartctl_attributes_json() {
       "$labels" \
       "$id" \
       "$raw"
+
+    # Calculate written_bytes for SATA devices
+    if [[ "$name" =~ ^Total_LBAs_Written$ ]]; then
+      local written_bytes=$((raw * sector_size))
+      printf "written_bytes{%s} %s\n" "$labels" "$written_bytes"
+    fi
   done
 
   # Extract and format temperature
@@ -145,7 +161,6 @@ parse_smartctl_attributes_json() {
   if [[ -n "$temperature" ]]; then
     printf "temperature_current{%s} %s\n" "$labels" "$temperature"
   fi
-
 }
 
 # Parse and extract NVMe SMART attributes from the provided JSON.
@@ -307,8 +322,15 @@ process_device() {
   attributes_json=$(/usr/sbin/smartctl -A -j -d "${type}" "${disk}")
   case ${type} in
     sat|sat+megaraid*)
-    # TODO: continue integrating block size if available from json info and multiply with lbs_written if avail
-      parse_smartctl_attributes_json "${disk}" "${type}" "${attributes_json}"
+      # Extract sector size from info_json for SATA devices
+      local sector_size=512
+      local extracted_sector_size
+      extracted_sector_size=$(echo "$info_json" | jq -r '.logical_block_size')
+      if [ "$extracted_sector_size" != "null" ]; then
+        sector_size="$extracted_sector_size"
+      fi
+
+      parse_smartctl_attributes_json "${disk}" "${type}" "${sector_size}" "${attributes_json}"
       ;;
     nvme)
       parse_smartctl_nvme_attributes_json "${disk}" "${type}" "${attributes_json}"
@@ -322,6 +344,7 @@ process_device() {
 
 # Main function to orchestrate the script.
 main() {
+  check_root
   ensure_jq_installed
 
   output_smartctl_version
