@@ -1,0 +1,45 @@
+name: Coverage Report
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  coverage:
+    runs-on: ubuntu-22.04
+
+    services:
+      kcov:
+        image: kcov/kcov:v42
+        options: --entrypoint sh
+        volumes:
+          - ${{ github.workspace }}:/workspace
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3.6.0
+
+      - name: Run coverage script inside kcov service container
+        run: |
+          docker exec ${{ job.services.kcov.id }} sh -c "cd /workspace && ./coverage.sh"
+
+    - name: Extract coverage from index.js
+      id: coverage
+      run: |
+        # Extract the coverage percentage directly from the index.js file
+        coverage=$(grep -oP '(?<=covered"\s*:\s*")\d+\.\d+' coverage/test_smartmon-json.coverage/index.js)
+
+        # Output the coverage percentage
+        echo "::set-output name=coverage::$coverage"
+
+    - name: Update README.md with coverage badge
+      if: github.ref_name == 'main' || github.ref_name == 'dev'
+      run: |
+        sed -i 's|\[!\[Coverage\](https://img.shields.io/badge/Coverage-[0-9]*%25-brightgreen)\]|[!\[Coverage\](https://img.shields.io/badge/Coverage-${{ steps.coverage.outputs.coverage }}%25-brightgreen)]|' README.md
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git add README.md
+        git commit -m "Update coverage badge"
+        git push origin ${{ github.ref_name }}

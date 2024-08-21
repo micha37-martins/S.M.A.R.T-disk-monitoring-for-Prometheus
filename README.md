@@ -90,7 +90,7 @@ run_coverage.sh
 kcov --bash-dont-parse-binary-dir \
      --include-path=. \
      /var/tmp/coverage \
-     bats -t test/test_smartmon-json.bats
+     bats -t test/test_smartmon.bats
 
 ## TODO
 - Write docs

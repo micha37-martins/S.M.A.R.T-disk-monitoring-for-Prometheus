@@ -4,9 +4,9 @@ setup() {
   export BATS_RUN_SKIP=true  # used to detect that script is tested not run
   load 'test_helper/bats-assert/load'
   load 'test_helper/bats-support/load'
-  load '../src/smartmon-json.sh'
+  load '../src/smartmon.sh'
   # make executables in src/ visible to PATH
-  PATH="$( pwd )/src/smartmon-json.sh:$PATH"
+  PATH="$( pwd )/src/smartmon.sh:$PATH"
 }
 
 ### Begin Helper Functions ###
