@@ -23,6 +23,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3.6.0
 
+      - name: DEBUG
+        run: |
+          docker exec ${{ job.services.kcov.id }} sh -c "echo test"
+
       - name: Run coverage script inside kcov service container
         run: |
           docker exec ${{ job.services.kcov.id }} sh -c "cd /workspace && ./coverage.sh"
