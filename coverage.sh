@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 SRC_DIR="./src"
 TEST_DIR="./test"
