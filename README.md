@@ -1,3 +1,5 @@
+![coverage](https://img.shields.io/badge/Coverage-50%25-brightgreen)
+
 # S.M.A.R.T.-disk-monitoring-for-Prometheus text_collector
 
 Prometheus `node_exporter` `text_collector` for S.M.A.R.T disk values
@@ -79,5 +81,18 @@ https://www.smartmontools.org/wiki/Download#Installfromthesourcetarball
 # TODO: tests install bats (bats-core):
 [bats-tutorial](https://bats-core.readthedocs.io/en/stable/tutorial.html)
 
+## Coverage
+´´´sh
+run_coverage.sh
+```
+
+### Manual Coverage
+kcov --bash-dont-parse-binary-dir \
+     --include-path=. \
+     /var/tmp/coverage \
+     bats -t test/test_smartmon-json.bats
+
 ## TODO
-- Proper implementation and tets for SCSI type disks. Please provide input if interested.
+- Write docs
+- docker
+- systemd instead of cron
