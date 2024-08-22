@@ -45,11 +45,12 @@ jobs:
           chmod +x ./coverage.sh
           bash ./coverage.sh
 
-      - name: Generate coverage percentage
+      - name: Extract coverage percentage
         id: coverage
         shell: bash
         run: |
-          coverage=$(grep -o 'Overall coverage rate.*' <path_to_coverage_report> | grep -o '[0-9]*\.[0-9]*')
+          grep -o 'Overall coverage rate.*' coverage/index.html | grep -o '[0-9]*\.[0-9]*' > coverage.txt
+          coverage=$(cat coverage.txt)
           echo "::set-output name=coverage::$coverage"
 
       - name: Update README.md with coverage badge
