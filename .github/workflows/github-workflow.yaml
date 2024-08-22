@@ -50,8 +50,8 @@ jobs:
         shell: bash
         run: |
           coverage=$(grep -oP '(?<=covered":")[^"]+' ./coverage/test_smartmon.coverage/index.js | head -n 1)
-        echo "Extracted coverage percentage: $coverage"
-        echo "::set-output name=coverage::$coverage"
+          echo "Extracted coverage percentage: $coverage"
+          echo "::set-output name=coverage::$coverage"
 
       - name: Update README.md with coverage badge
         run: |
