@@ -45,11 +45,12 @@ jobs:
           chmod +x ./coverage.sh
           bash ./coverage.sh
 
+      # Info: sed is used as the js file is no strict json format
       - name: Extract coverage percentage from index.js
         id: coverage
         shell: bash
         run: |
-          coverage=$(jq -r '.files[0].covered' ./coverage/test_smartmon.coverage/index.js)
+          coverage=$(sed -n '/var data = /,/};/p' ./coverage/test_smartmon.coverage/index.js | sed '1s/.*= //' | sed '$s/};/}/' | jq -r '.files[0].covered')
           echo "Extracted coverage percentage: $coverage"
           echo "::set-output name=coverage::$coverage"
 
