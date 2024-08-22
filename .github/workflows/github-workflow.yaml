@@ -17,14 +17,8 @@ jobs:
       #        - ${{ github.workspace }}:/workspace
 
     steps:
-      #      - name: Checkout code
-      #        uses: actions/checkout@v3.6.0
-
-      - name: Checkout code with submodules
+      - name: Checkout code
         uses: actions/checkout@v3.6.0
-        with:
-          submodules: true # Fetch all submodules
-          fetch-depth: 0   # Necessary to fetch all branches/tags, including submodules
 
       - name: Install curl
         run: |
@@ -36,6 +30,10 @@ jobs:
           cd bats-core-1.4.1
           ./install.sh /usr/local
           rm -rf bats-core-1.4.1
+
+      - name: Install bats-assert
+        run: |
+          git clone https://github.com/bats-core/bats-assert.git /usr/local/lib/bats-assert
 
       - name: Run coverage script
         run: |
