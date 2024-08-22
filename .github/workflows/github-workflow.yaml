@@ -24,7 +24,7 @@ jobs:
 
       - name: Install necessary tools (Git and Curl)
         run: |
-          apt-get update && apt-get install -y curl git jq smartctl
+          apt-get update && apt-get install -y curl git jq smartmontools
 
       - name: Install specific version of bats
         run: |
