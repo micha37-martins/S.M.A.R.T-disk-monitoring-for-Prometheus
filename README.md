@@ -1,4 +1,18 @@
+![Tag](https://img.shields.io/github/v/tag/micha37-martins/S.M.A.R.T-disk-monitoring-for-Prometheus)
+
 ![Coverage](https://img.shields.io/badge/Coverage-50%25-brightgreen)
+
+![Language](https://img.shields.io/github/languages/top/micha37-martins/S.M.A.R.T-disk-monitoring-for-Prometheus)
+
+![Downloads](https://img.shields.io/github/downloads/micha37-martins/S.M.A.R.T-disk-monitoring-for-Prometheus/total)
+
+![License](https://img.shields.io/github/license/micha37-martins/S.M.A.R.T-disk-monitoring-for-Prometheus)
+
+![Forks](https://img.shields.io/github/forks/micha37-martins/S.M.A.R.T-disk-monitoring-for-Prometheus)
+
+![Stars](https://img.shields.io/github/stars/micha37-martins/S.M.A.R.T-disk-monitoring-for-Prometheus)
+
+![Last Commit](https://img.shields.io/github/last-commit/micha37-martins/S.M.A.R.T-disk-monitoring-for-Prometheus)
 
 # S.M.A.R.T.-disk-monitoring-for-Prometheus text_collector
 
