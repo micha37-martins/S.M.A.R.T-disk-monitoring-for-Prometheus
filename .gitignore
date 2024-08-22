@@ -2,3 +2,4 @@
 *.swo
 *.tmp
 coverage/
+grafana*
