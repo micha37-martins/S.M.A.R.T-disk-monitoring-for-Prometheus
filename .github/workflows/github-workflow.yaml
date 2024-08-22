@@ -53,6 +53,10 @@ jobs:
           echo "Extracted coverage percentage: $coverage"
           echo "::set-output name=coverage::$coverage"
 
+      - name: Configure Git Safe Directory
+        run: |
+          git config --global --add safe.directory /__w/${{ github.repository }}/__w/${{ github.repository }}
+
       - name: Update README.md with coverage badge
         run: |
           sed -i 's|\[!\[Coverage\](https://img.shields.io/badge/Coverage-[0-9]*%25-brightgreen)\]|[!\[Coverage\](https://img.shields.io/badge/Coverage-${{ steps.coverage.outputs.coverage }}%25-brightgreen)]|' README.md
