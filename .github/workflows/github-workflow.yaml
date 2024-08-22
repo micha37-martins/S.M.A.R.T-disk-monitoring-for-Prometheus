@@ -20,9 +20,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3.6.0
 
-      - name: Install curl
+      - name: Install necessary tools (Git and Curl)
         run: |
-          apt-get update && apt-get install -y curl
+          apt-get update && apt-get install -y git curl
 
       - name: Install specific version of bats
         run: |
