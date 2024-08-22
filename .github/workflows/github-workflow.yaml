@@ -36,10 +36,11 @@ jobs:
           git clone https://github.com/bats-core/bats-support.git /usr/local/lib/bats-support
           git clone https://github.com/bats-core/bats-assert.git /usr/local/lib/bats-assert
 
-      - name: Run coverage script
+      - name: Run coverage script with Bash
         run: |
+          export BATS_LIB_PATH=/usr/local/lib
           chmod +x ./coverage.sh
-          ./coverage.sh
+          bash ./coverage.sh
 
       - name: Generate coverage percentage
         id: coverage
