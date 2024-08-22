@@ -17,8 +17,14 @@ jobs:
       #        - ${{ github.workspace }}:/workspace
 
     steps:
-      - name: Checkout code
+      #      - name: Checkout code
+      #        uses: actions/checkout@v3.6.0
+
+      - name: Checkout code with submodules
         uses: actions/checkout@v3.6.0
+        with:
+          submodules: true # Fetch all submodules
+          fetch-depth: 0   # Necessary to fetch all branches/tags, including submodules
 
       - name: Install curl
         run: |
