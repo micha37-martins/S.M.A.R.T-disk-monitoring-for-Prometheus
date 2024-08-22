@@ -24,7 +24,7 @@ jobs:
 
       - name: Install necessary tools (Git and Curl)
         run: |
-          apt-get update && apt-get install -y git curl
+          apt-get update && apt-get install -y curl git jq
 
       - name: Install specific version of bats
         run: |
