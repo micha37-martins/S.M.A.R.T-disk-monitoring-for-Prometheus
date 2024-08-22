@@ -31,8 +31,9 @@ jobs:
           ./install.sh /usr/local
           rm -rf bats-core-1.4.1
 
-      - name: Install bats-assert
+      - name: Install bats-assert and bats-support
         run: |
+          git clone https://github.com/bats-core/bats-support.git /usr/local/lib/bats-support
           git clone https://github.com/bats-core/bats-assert.git /usr/local/lib/bats-assert
 
       - name: Run coverage script
