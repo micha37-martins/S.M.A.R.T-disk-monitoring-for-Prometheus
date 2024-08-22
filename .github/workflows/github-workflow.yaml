@@ -53,9 +53,12 @@ jobs:
           echo "Extracted coverage percentage: $coverage"
           echo "::set-output name=coverage::$coverage"
 
+      - name: Print Current Working Directory
+        run: pwd
+
       - name: Configure Git Safe Directory
         run: |
-          git config --global --add safe.directory /__w/${{ github.repository }}/__w/${{ github.repository }}
+          git config --global --add safe.directory "$(pwd)"
 
       - name: Update README.md with coverage badge
         run: |
