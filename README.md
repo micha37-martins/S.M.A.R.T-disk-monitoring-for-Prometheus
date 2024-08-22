@@ -1,4 +1,4 @@
-![coverage](https://img.shields.io/badge/Coverage-50%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-50%25-brightgreen)
 
 # S.M.A.R.T.-disk-monitoring-for-Prometheus text_collector
 
