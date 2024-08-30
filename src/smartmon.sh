@@ -1,19 +1,7 @@
 #!/usr/bin/env bash
 
-# TODO: remove json postfix
-# TODO: warning breaking changes
-# TODO: test tolowercase
-# - Renaming
-# - JSON
-# - Drop SCSI
-
 # This script is designed to collect SMART data from various types of
-# disks (ATA, NVMe, SCSI) and format it for Prometheus monitoring.
-# Be aware that SCSI type is not tested!
-#
-# By design this script works with a filter list of values. Opposed to parsing
-# all elements from the JSON output of smartctl this seems more robust as
-# different vendors might use inconsistent value naming.
+# disks (ATA, NVMe) and format it for Prometheus monitoring.
 
 # Check if this script is run as root
 # Do not exit if test is run by bats
@@ -169,31 +157,6 @@ parse_smartctl_attributes_json() {
 #   $1 - Disk name
 #   $2 - Disk type
 #   $3 - JSON string containing NVMe SMART attributes
-#parse_smartctl_nvme_attributes_json() {
-#  local disk="$1"
-#  local disk_type="$2"
-#  local json="$3"
-#  local labels="disk=\"${disk}\",type=\"${disk_type}\""
-#
-#  # return early if no input
-#  if [ "$json" == {} ]; then
-#    return 0
-#  fi
-#
-#  # Extract and format NVMe SMART attributes using jq
-#  echo "$json" | jq -r '
-#    .nvme_smart_health_information_log |
-#    to_entries[] |
-#    select(.key and (.value | type != "array")) |
-#    [
-#      (.key | gsub("-"; "_")),
-#      .value
-#    ] | @tsv
-#  ' | while IFS=$'\t' read -r key value; do
-#    local metric_name="${key}"
-#    echo "$(echo "${metric_name}" | awk '{print tolower($0)}'){${labels}} ${value}"
-#  done
-#}
 parse_smartctl_nvme_attributes_json() {
   local disk="$1"
   local disk_type="$2"
