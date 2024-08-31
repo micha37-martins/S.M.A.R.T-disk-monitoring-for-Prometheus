@@ -1,0 +1,70 @@
+# yamllint disable rule:line-length
+---
+name: Coverage
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  coverage:
+    runs-on: ubuntu-22.04
+    container:
+      image: kcov/kcov:v42
+      options: --privileged
+      #      volumes:
+      #        - ${{ github.workspace }}:/workspace
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3.6.0
+
+      - name: Install necessary tools (Git and Curl)
+        run: |
+          apt-get update && apt-get install -y curl git jq smartmontools
+
+      - name: Install specific version of bats
+        run: |
+          curl -L https://github.com/bats-core/bats-core/archive/v1.4.1.tar.gz | tar -xz
+          cd bats-core-1.4.1
+          ./install.sh /usr/local
+          rm -rf bats-core-1.4.1
+
+      - name: Checkout code with submodules
+        uses: actions/checkout@v3
+        with:
+          submodules: true          # Fetch all submodules
+          fetch-depth: 0            # Fetch full history, required for submodules
+          submodule-token: ${{ secrets.GITHUB_TOKEN }}  # Ensure access to private submodules if needed
+
+      - name: Run coverage script with Bash
+        run: |
+          chmod +x ./coverage.sh
+          bash ./coverage.sh
+
+      - name: Extract coverage percentage from index.js
+        id: coverage
+        shell: bash
+        run: |
+          coverage=$(grep -oP '(?<=covered":")[^"]+' ./coverage/test_smartmon.coverage/index.js | head -n 1)
+          echo "Extracted coverage percentage: $coverage"
+          echo "::set-output name=coverage::$coverage"
+
+      - name: Print Current Working Directory
+        run: pwd
+
+      - name: Configure Git Safe Directory
+        run: |
+          git config --global --add safe.directory "$(pwd)"
+
+      - name: Update README.md with coverage badge
+        run: |
+          sed -i 's|https:\/\/img\.shields\.io\/badge\/Coverage-[0-9]*\(\.[0-9]*\)\?%25-brightgreen|https:\/\/img\.shields\.io\/badge\/Coverage-65.2%25-brightgreen|g' README.md
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add README.md  # Ensure README.md is staged
+          git commit -m "Update coverage badge"
+          git push origin ${GITHUB_REF#refs/heads/}
