@@ -4,7 +4,7 @@
 SMARTMON_PATH="${SMARTMON_PATH:-/usr/local/bin}"
 
 # Download the smartmon.sh script from the repository or a release asset
-wget -O "${SMARTMON_PATH}/smartmon.sh" https://raw.githubusercontent.com/micha37-martins/smart-disk-exporter/main/smartmon.sh
+wget -O "${SMARTMON_PATH}/smartmon.sh" https://raw.githubusercontent.com/micha37-martins/S.M.A.R.T-disk-monitoring-for-Prometheus/master/src/smartmon.sh
 
 # Set the appropriate permissions on the smartmon.sh script
 chmod +x "${SMARTMON_PATH}/smartmon.sh"
