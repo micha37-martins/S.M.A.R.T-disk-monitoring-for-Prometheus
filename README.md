@@ -15,7 +15,7 @@ _Inspired by the great examples of the Prometheus community:_
 [textfile-collector-scripts](https://github.com/prometheus-community/node-exporter-textfile-collector-scripts)
 ___
 It has been specifically developed to work seamlessly with the
-[SMART Disk Monitoring for Prometheus Dashboard](https://grafana.com/grafana/dashboards/10530-s-m-a-r-t-disk-monitoring-for-prometheus-dashboard/) on Grafana.
+SMART Disk Monitoring for Prometheus Dashboard on Grafana.
 
 >
 >[https://grafana.com/dashboards/10530](https://grafana.com/dashboards/10530)
