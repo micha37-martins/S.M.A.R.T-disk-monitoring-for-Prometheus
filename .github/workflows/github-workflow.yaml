@@ -62,9 +62,15 @@ jobs:
 
       - name: Update README.md with coverage badge
         run: |
-          sed -i 's|https:\/\/img\.shields\.io\/badge\/Coverage-[0-9]*\(\.[0-9]*\)\?%25-brightgreen|https:\/\/img\.shields\.io\/badge\/Coverage-65.2%25-brightgreen|g' README.md
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add README.md  # Ensure README.md is staged
-          git commit -m "Update coverage badge"
-          git push origin ${GITHUB_REF#refs/heads/}
+          current_coverage=$(grep -oP '(?<=Coverage-)\d+\.\d+(?=%25)' README.md)
+
+          if [[ "$current_coverage" != "$coverage" ]]; then
+            sed -i 's|https:\/\/img\.shields\.io\/badge\/Coverage-[0-9]*\(\.[0-9]*\)\?%25-brightgreen|https:\/\/img\.shields\.io\/badge\/Coverage-$coverage%25-brightgreen|g' README.md
+            git config --global user.name 'github-actions[bot]'
+            git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+            git add README.md  # Ensure README.md is staged
+            git commit -m "Update coverage badge"
+            git push origin ${GITHUB_REF#refs/heads/}
+          else
+            echo "Coverage percentage has not changed. Skipping update."
+          fi
