@@ -158,14 +158,44 @@ kcov --bash-dont-parse-binary-dir \
      bats -t test/test_smartmon.bats
 ```
 
-## Run as Container
-docker build --network=host -t smartmon .
+## Run as Container using Docker
+### Use ghcr.io image
 
-docker run --privileged -v /var/lib/node_exporter/textfile_collector:/var/lib/node_exporter/textfile_collector --network=host smartmon:latest
+To run the container image from GitHub Container Registry (ghcr.io),
+use the docker run command with the ghcr.io URL for the container image.
 
-Alternatively to --privileged, you can grant the container access to specific disk devices using the --device flag. Here's an example of how you can grant the container access to the /dev/sda and /dev/sdb devices:
+```sh
+docker run \
+  --privileged \
+  -v /var/lib/node_exporter/textfile_collector:/var/lib/node_exporter/textfile_collector \
+  --network=host \
+  ghcr.io/micha37-martins/smart-disk-monitoring-for-prometheus:latest
+```
 
+> Alternatively to --privileged, you can grant the container access to specific
+disk devices using the --device flag.
+Here's an example of how you can grant the container only access to
+/dev/sda and /dev/sdb devices:
+
+```sh
+docker run \
+  --device /dev/sda \
+  --device /dev/sdb \
+  -v /var/lib/node_exporter/textfile_collector:/var/lib/node_exporter/textfile_collector \
+  --network=host \
+  ghcr.io/micha37-martins/smart-disk-monitoring-for-prometheus:latest
+```
+
+You can modify the docker run command to fit your specific needs.
+
+### Build the Container
+
+```sh
+docker build \
+  --network=host \
+  -t smart-disk-monitoring-for-prometheus \
+  https://github.com/micha37-martins/S.M.A.R.T-disk-monitoring-for-Prometheus.git
+```
 
 ## TODO
-- create container
 - Test install.sh script
