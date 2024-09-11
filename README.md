@@ -158,6 +158,14 @@ kcov --bash-dont-parse-binary-dir \
      bats -t test/test_smartmon.bats
 ```
 
+## Run as Container
+docker build --network=host -t smartmon .
+
+docker run --privileged -v /var/lib/node_exporter/textfile_collector:/var/lib/node_exporter/textfile_collector --network=host smartmon:latest
+
+Alternatively to --privileged, you can grant the container access to specific disk devices using the --device flag. Here's an example of how you can grant the container access to the /dev/sda and /dev/sdb devices:
+
+
 ## TODO
 - create container
 - Test install.sh script
