@@ -6,7 +6,7 @@ name: Coverage
 on:
   push:
     branches:
-      - main
+      - master
       - dev
 
 jobs:
