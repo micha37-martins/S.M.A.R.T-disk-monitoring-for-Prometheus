@@ -86,7 +86,7 @@ jobs:
         with:
           # list of Docker images to use as base name for tags
           images: |
-            ghcr.io/micha37-martins/${{ github.repository }}
+            ghcr.io/smartmon
 
           # generate Docker tags based on the following events/attributes
           tags: |
@@ -94,7 +94,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            type=sha
+#           type=sha
 
       - name: Checkout code
         uses: actions/checkout@v3.6.0
