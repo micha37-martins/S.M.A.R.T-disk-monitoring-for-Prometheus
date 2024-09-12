@@ -169,7 +169,7 @@ docker run \
   --privileged \
   -v /var/lib/node_exporter/textfile_collector:/var/lib/node_exporter/textfile_collector \
   --network=host \
-  ghcr.io/micha37-martins/smart-disk-monitoring-for-prometheus:latest
+  ghcr.io/micha37-martins/smartmon:latest
 ```
 
 > Alternatively to --privileged, you can grant the container access to specific
@@ -183,7 +183,7 @@ docker run \
   --device /dev/sdb \
   -v /var/lib/node_exporter/textfile_collector:/var/lib/node_exporter/textfile_collector \
   --network=host \
-  ghcr.io/micha37-martins/smart-disk-monitoring-for-prometheus:latest
+  ghcr.io/micha37-martins/smartmon:latest
 ```
 
 You can modify the docker run command to fit your specific needs.
