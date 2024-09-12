@@ -92,6 +92,7 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
 
       - name: Checkout code
         uses: actions/checkout@v3.6.0
