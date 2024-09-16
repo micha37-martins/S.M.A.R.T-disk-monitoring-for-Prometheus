@@ -9,6 +9,9 @@ wget -O "${SMARTMON_PATH}/smartmon.sh" https://raw.githubusercontent.com/micha37
 # Set the appropriate permissions on the smartmon.sh script
 chmod +x "${SMARTMON_PATH}/smartmon.sh"
 
+# Create directory for output file
+mkdir -p /var/lib/node_exporter/textfile_collector
+
 # Create the systemd service unit file
 cat <<EOF > /etc/systemd/system/smartmon.service
 [Unit]
