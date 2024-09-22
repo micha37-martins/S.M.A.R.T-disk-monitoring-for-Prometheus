@@ -110,20 +110,6 @@ sudo sh -c 'smartmon.sh > /var/lib/node_exporter/textfile_collector/smart_metric
 /usr/bin/prometheus-node-exporter --collector.textfile.directory /var/lib/node_exporter/textfile_collector/
 ```
 
-## Troubleshooting
-To get an up to date version of smartmontools it could be necessary to compile it:
-https://www.smartmontools.org/wiki/Download#Installfromthesourcetarball
-
-- check by executing `smartctl --version`
-
-- make smartmon.sh executable
-
-- save it under `/usr/local/bin/smartmon.sh`
-
-- make sure `/var/lib/node_exporter/textfile_collector/` exists
-  - `mkdir -p /var/lib/node_exporter/textfile_collector/`
-
-
 ## Development and Testing
 ### Adding New Metrics
 Feel free to adapt this script to your needs. The metrics provided are a subset
@@ -198,6 +184,17 @@ docker build \
 ```
 
 ## Troubleshooting
+### Smartmontools not working
+To get an up to date version of smartmontools it could be necessary to compile it:
+https://www.smartmontools.org/wiki/Download#Installfromthesourcetarball
+
+- check by executing `smartctl --version`
+- make smartmon.sh executable
+- save it under `/usr/local/bin/smartmon.sh`
+- make sure `/var/lib/node_exporter/textfile_collector/` exists
+  - `mkdir -p /var/lib/node_exporter/textfile_collector/`
+
+### Problems with some Segate drives
 It was brought up that some Segate drives report inaccurate raw data:
 https://github.com/micha37-martins/S.M.A.R.T-disk-monitoring-for-Prometheus/issues/22
 
