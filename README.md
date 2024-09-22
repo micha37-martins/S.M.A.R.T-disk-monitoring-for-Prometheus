@@ -197,5 +197,11 @@ docker build \
   https://github.com/micha37-martins/S.M.A.R.T-disk-monitoring-for-Prometheus.git
 ```
 
+## Troubleshooting
+It was brought up that some Segate drives report inaccurate raw data:
+https://github.com/micha37-martins/S.M.A.R.T-disk-monitoring-for-Prometheus/issues/22
+
+Therefor high error rates might be blamed on this.
+
 ## TODO
 - Test install.sh script
