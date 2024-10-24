@@ -17,7 +17,8 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/env bash ${SMARTMON_PATH}/smartmon.sh > /var/lib/node_exporter/textfile_collector/smart_metrics.prom
+ExecStart=/usr/bin/env bash ${SMARTMON_PATH}/smartmon.sh
+StandardOutput=truncate:/var/lib/node_exporter/textfile_collector/smart_metrics.prom
 WorkingDirectory=/var/lib/node_exporter/textfile_collector/
 
 [Install]
