@@ -3,6 +3,30 @@
 # This script is designed to collect SMART data from various types of
 # disks (ATA, NVMe) and format it for Prometheus monitoring.
 
+# Configurable flag to indicate Seagate-specific behavior
+seagate_special=false
+
+# Function to parse command line arguments for Seagate flag
+parse_command_line_arguments() {
+  while [[ "$#" -gt 0 ]]; do
+    case $1 in
+      --seagate_special)
+        seagate_special=true
+        shift
+        ;;
+      *)
+        # Ignore unknown options when in Bats test mode
+        if [ -z "$BATS_RUN_SKIP" ]; then
+          echo "Unknown option: $1"
+          exit 1
+        else
+          shift
+        fi
+        ;;
+    esac
+  done
+}
+
 # Check if this script is run as root
 # Do not exit if test is run by bats
 check_root() {
@@ -277,12 +301,20 @@ process_device() {
 
   # Get and parse SMART information
   local info_json
-  info_json=$(/usr/sbin/smartctl -i -j -d "${type}" "${disk}")
+  if [ "$seagate_special" = true ] && [[ "$type" == sat* ]]; then
+    info_json=$(/usr/sbin/smartctl -i -j -v 1,raw48,54 -v 7,raw48,54 -d "${type}" "${disk}")
+  else
+    info_json=$(/usr/sbin/smartctl -i -j -d "${type}" "${disk}")
+  fi
   parse_smartctl_info_json "${disk}" "${type}" "${info_json}"
 
   # Get and parse SMART attributes
   local attributes_json
-  attributes_json=$(/usr/sbin/smartctl -A -j -d "${type}" "${disk}")
+  if [ "$seagate_special" = true ] && [[ "$type" == sat* ]]; then
+    attributes_json=$(/usr/sbin/smartctl -A -j -v 1,raw48,54 -v 7,raw48,54 -d "${type}" "${disk}")
+  else
+    attributes_json=$(/usr/sbin/smartctl -A -j -d "${type}" "${disk}")
+  fi
   case ${type} in
     sat|sat+megaraid*)
       # Extract sector size from info_json for SATA devices
@@ -307,6 +339,7 @@ process_device() {
 
 # Main function to orchestrate the script.
 main() {
+  parse_command_line_arguments "$@"
   check_root
   ensure_jq_installed
 
@@ -326,4 +359,4 @@ main() {
 }
 
 # Run the main function
-main
+main "$@"

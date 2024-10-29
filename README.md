@@ -194,11 +194,14 @@ https://www.smartmontools.org/wiki/Download#Installfromthesourcetarball
 - make sure `/var/lib/node_exporter/textfile_collector/` exists
   - `mkdir -p /var/lib/node_exporter/textfile_collector/`
 
-### Problems with some Segate drives
-It was brought up that some Segate drives report inaccurate raw data:
+### Problems with some Seagate drives
+It was brought up that some Seagate drives report inaccurate raw data:
 https://github.com/micha37-martins/S.M.A.R.T-disk-monitoring-for-Prometheus/issues/22
 
 Therefor high error rates might be blamed on this.
+
+> TODO: currently this flag is only available using `seagate_special` branch.
+Use flag `--seagate_special` to try to circumvent this behaviour.
 
 ## TODO
 - Test install.sh script
