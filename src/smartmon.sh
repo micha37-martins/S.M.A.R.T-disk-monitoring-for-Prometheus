@@ -301,20 +301,26 @@ process_device() {
 
   # Get and parse SMART information
   local info_json
-  if [ "$seagate_special" = true ] && [[ "$type" == sat* ]]; then
-    info_json=$(/usr/sbin/smartctl -i -j -v 1,raw48,54 -v 7,raw48,54 -d "${type}" "${disk}")
-  else
-    info_json=$(/usr/sbin/smartctl -i -j -d "${type}" "${disk}")
-  fi
+  info_json=$(/usr/sbin/smartctl -i -j -d "${type}" "${disk}")
+
   parse_smartctl_info_json "${disk}" "${type}" "${info_json}"
 
   # Get and parse SMART attributes
+  # This part contains a special case for some Seagate drives
   local attributes_json
   if [ "$seagate_special" = true ] && [[ "$type" == sat* ]]; then
-    attributes_json=$(/usr/sbin/smartctl -A -j -v 1,raw48,54 -v 7,raw48,54 -d "${type}" "${disk}")
+    local model_name
+    model_name=$(echo "$info_json" | jq -r '.model_name // empty')
+
+    if [[ "$model_name" == ST* ]]; then
+      attributes_json=$(/usr/sbin/smartctl -A -j -d "${type}" -v 1,raw48:54 -v 7,raw48:54 "${disk}")
+    else
+      attributes_json=$(/usr/sbin/smartctl -A -j -d "${type}" "${disk}")
+    fi
   else
     attributes_json=$(/usr/sbin/smartctl -A -j -d "${type}" "${disk}")
   fi
+
   case ${type} in
     sat|sat+megaraid*)
       # Extract sector size from info_json for SATA devices
