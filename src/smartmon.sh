@@ -45,7 +45,8 @@ EOF
 )
 
   for key in "${keys_general[@]}"; do
-    device_infos+="$key="\"$(jq -r --arg key "$key" '.[$key] // empty' <<< "$json")\"\,
+  # Added escaping for special characters
+    device_infos+="$key="\"$(jq -r --arg key "$key" '.[$key] // empty' <<< "$json" | sed 's/"/\\"/g')\"\,
   done
 
   # Remove the last comma
