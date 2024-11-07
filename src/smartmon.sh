@@ -107,28 +107,28 @@ parse_smartctl_attributes_json() {
 
     local metric_name
 
-    metric_name="${name}_value"
+    metric_name="${name//\//_}_value"
     printf "%s{%s,smart_id=\"%s\"} %s\n" \
       "$(echo "$metric_name" | awk '{print tolower($0)}')" \
       "$labels" \
       "$id" \
       "$value"
 
-    metric_name="${name}_worst"
+    metric_name="${name//\//_}_worst"
     printf "%s{%s,smart_id=\"%s\"} %s\n" \
       "$(echo "$metric_name" | awk '{print tolower($0)}')" \
       "$labels" \
       "$id" \
       "$worst"
 
-    metric_name="${name}_threshold"
+    metric_name="${name//\//_}_threshold"
     printf "%s{%s,smart_id=\"%s\"} %s\n" \
       "$(echo "$metric_name" | awk '{print tolower($0)}')" \
       "$labels" \
       "$id" \
       "$thresh"
 
-    metric_name="${name}_raw_value"
+    metric_name="${name//\//_}_raw_value"
     printf "%s{%s,smart_id=\"%s\"} %s\n" \
       "$(echo "$metric_name" | awk '{print tolower($0)}')" \
       "$labels" \
