@@ -12,24 +12,20 @@ TEXTFILE_DIR="${TEXTFILE_DIR:-/var/lib/node_exporter/textfile_collector}"
 # Check node_exporter status and configuration
 check_node_exporter () {
   if systemctl is-active --quiet node_exporter; then
-      echo "Node Exporter is running. Verifying textfile collector configuration..."
+    echo "Node Exporter is running. Verifying textfile collector configuration..."
 
-      # Hole den vollständigen Befehl des laufenden Node Exporters
-      node_exporter_cmd=$(ps -o args= -C node_exporter)
+if ! ps aux | grep -q "[n]ode_exporter.*--collector.textfile.directory"; then
+    echo "❌ The Prometheus Node Exporter is not configured with the required \
+      --collector.textfile.directory option." >&2
+    echo "ℹ️ Please configure the Node Exporter with \
+      --collector.textfile.directory=${TEXTFILE_DIR}" >&2
+    exit 1
+fi
 
-      # Überprüfe, ob die Option für das Textfile-Directory gesetzt ist
-      if [[ "$node_exporter_cmd" != *"--collector.textfile.directory=${TEXTFILE_DIR}"* ]]; then
-          echo "ERROR: Node Exporter is missing the required --collector.textfile.directory option."
-          echo "Expected option: --collector.textfile.directory=${TEXTFILE_DIR}"
-          echo "Please ensure Node Exporter is started with this option."
-          echo "To fix this, update the Node Exporter systemd unit file and reload the service:"
-          echo "  systemctl daemon-reload && systemctl restart node_exporter"
-          exit 1
-      fi
-
-      echo "Node Exporter is correctly configured for the textfile collector at ${TEXTFILE_DIR}."
+      echo "✅ Node Exporter is correctly configured for the textfile collector at ${TEXTFILE_DIR}."
   else
-      echo "ERROR: Node Exporter is not running. Please start it and ensure correct configuration."
+      echo "❌ ERROR: Node Exporter is not running. \
+        Please start it and ensure correct configuration." >&2
       exit 1
   fi
 }
