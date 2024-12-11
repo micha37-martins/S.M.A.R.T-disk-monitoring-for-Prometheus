@@ -14,7 +14,7 @@ check_node_exporter () {
   if systemctl is-active --quiet node_exporter; then
     echo "Node Exporter is running. Verifying textfile collector configuration..."
 
-if ! ps aux | grep -q "[n]ode_exporter.*--collector.textfile.directory"; then
+if ! systemctl show node_exporter --property=ExecStart | grep -q -- "--collector.textfile.directory"; then
     echo "❌ The Prometheus Node Exporter is not configured with the required \
       --collector.textfile.directory option." >&2
     echo "ℹ️ Please configure the Node Exporter with \
@@ -46,6 +46,7 @@ ensure_textfile_directory () {
 
 prepare_script () {
   # Download the smartmon.sh script from the repository or a release asset
+  echo "Downloading and preparing smartmon.sh..."
   wget -O "${SMARTMON_PATH}/smartmon.sh" https://raw.githubusercontent.com/micha37-martins/S.M.A.R.T-disk-monitoring-for-Prometheus/master/src/smartmon.sh
 
   # Set the appropriate permissions on the smartmon.sh script
@@ -54,16 +55,22 @@ prepare_script () {
 
 # Create the systemd service unit file
 create_systemd_service () {
-cat <<EOF > /etc/systemd/system/smartmon.service
+  echo "Creating systemd service for smartmon..."
+  cat <<EOF > /etc/systemd/system/smartmon.service
 [Unit]
 Description=SMART Disk Exporter for Prometheus
-After=network.target
+After=network-online.target
 
 [Service]
 Type=simple
 ExecStart=/usr/bin/env bash ${SMARTMON_PATH}/smartmon.sh
 StandardOutput=truncate:/var/lib/node_exporter/textfile_collector/smart_metrics.prom
 WorkingDirectory=/var/lib/node_exporter/textfile_collector/
+User=root
+Group=root
+SyslogIdentifier=smartmon
+StandardError=journal
+RemainAfterExit=no
 
 [Install]
 WantedBy=multi-user.target
@@ -81,7 +88,8 @@ EOF
 
 # Create the systemd timer unit file
 create_systemd_timer () {
-cat <<EOF > /etc/systemd/system/smartmon.timer
+  echo "Creating systemd timer for smartmon..."
+  cat <<EOF > /etc/systemd/system/smartmon.timer
 [Unit]
 Description=Run SMART Disk Exporter for Prometheus every 10 minutes
 
