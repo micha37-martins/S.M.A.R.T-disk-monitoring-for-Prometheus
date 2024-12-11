@@ -29,6 +29,20 @@ fi
       exit 1
   fi
 }
+#
+# Check if the textfile collector directory exists
+ensure_textfile_directory () {
+  if [ ! -d "${TEXTFILE_DIR}" ]; then
+    echo "ℹ️ The directory ${TEXTFILE_DIR} does not exist. Creating it..."
+    mkdir -p "${TEXTFILE_DIR}" || {
+      echo "❌ ERROR: Failed to create directory ${TEXTFILE_DIR}. Check permissions." >&2
+      exit 1
+    }
+    echo "✅ Directory ${TEXTFILE_DIR} created successfully."
+  else
+    echo "✅ Directory ${TEXTFILE_DIR} already exists."
+  fi
+}
 
 prepare_script () {
   # Download the smartmon.sh script from the repository or a release asset
@@ -91,6 +105,7 @@ EOF
 
 # Execute the individual steps
 check_node_exporter
+ensure_textfile_directory
 prepare_script
 create_systemd_service
 create_systemd_timer
