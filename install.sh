@@ -56,6 +56,12 @@ prepare_script () {
 # Create the systemd service unit file
 create_systemd_service () {
   echo "Creating systemd service for smartmon..."
+
+    local seagate_flag=""
+    if [[ $SEAGATE_SPECIAL == true ]]; then
+        seagate_flag="--seagate_special"
+    fi
+
   cat <<EOF > /etc/systemd/system/smartmon.service
 [Unit]
 Description=SMART Disk Exporter for Prometheus
@@ -63,7 +69,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/env bash ${SMARTMON_PATH}/smartmon.sh
+ExecStart=/usr/bin/env bash ${SMARTMON_PATH}/smartmon.sh $seagate_flag
 StandardOutput=truncate:/var/lib/node_exporter/textfile_collector/smart_metrics.prom
 WorkingDirectory=/var/lib/node_exporter/textfile_collector/
 User=root
@@ -111,7 +117,25 @@ EOF
   systemctl start smartmon.timer
 }
 
+# Parse command-line options
+parse_args () {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --seagate_special)
+            SEAGATE_SPECIAL=true
+            shift # Move to next argument
+            ;;
+        *)
+            echo "❌ Unknown option: $1"
+            exit 1
+            ;;
+    esac
+  done
+}
+
+
 # Execute the individual steps
+parse_args $@
 check_node_exporter
 ensure_textfile_directory
 prepare_script
