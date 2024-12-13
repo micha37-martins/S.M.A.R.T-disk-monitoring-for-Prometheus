@@ -200,8 +200,7 @@ https://github.com/micha37-martins/S.M.A.R.T-disk-monitoring-for-Prometheus/issu
 
 Therefor high error rates might be blamed on this.
 
-> TODO: currently this flag is only available using `seagate_special` branch.
 Use flag `--seagate_special` to try to circumvent this behaviour.
 
 ## TODO
-- Test install.sh script
+- Test nd optimize install.sh script
