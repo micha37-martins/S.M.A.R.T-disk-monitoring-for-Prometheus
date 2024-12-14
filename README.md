@@ -203,4 +203,4 @@ Therefor high error rates might be blamed on this.
 Use flag `--seagate_special` to try to circumvent this behaviour.
 
 ## TODO
-- Test nd optimize install.sh script
+- Test and optimize install.sh script
