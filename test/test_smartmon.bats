@@ -216,17 +216,17 @@ EOF
     "serial_number": "123456789",
     "firmware_version": "80.00A80",
     "smart_support": {
-      "is_available": 1,
-      "is_enabled": 1
+      "available": 1,
+      "enabled": 1
     },
     "smart_status": {
-      "passed": 1
+      "passed": true
     }
   }'
 
   local expected_output="device_info{disk=\"${disk}\",type=\"${disk_type}\",model_family=\"JBOD-Star\",model_name=\"Star-Light\",device_model=\"ND-01Model\",serial_number=\"123456789\",firmware_version=\"80.00A80\",vendor=\"NorthernDigital\",product=\"ND-01\",revision=\"10.01\",lun_id=\"0\"} 1
-smart_support_is_available{disk=\"${disk}\",type=\"${disk_type}\"} 1
-smart_support_is_enabled{disk=\"${disk}\",type=\"${disk_type}\"} 1
+smart_support_available{disk=\"${disk}\",type=\"${disk_type}\"} 1
+smart_support_enabled{disk=\"${disk}\",type=\"${disk_type}\"} 1
 smart_status_passed{disk=\"${disk}\",type=\"${disk_type}\"} 1"
 
   local output
