@@ -30,10 +30,10 @@ parse_command_line_arguments() {
 # Check if this script is run as root
 # Do not exit if test is run by bats
 check_root() {
-    if [ "$EUID" -ne 0 ] && [ -z "$BATS_RUN_SKIP" ]; then
-        echo "This script must be run as root"
-        exit 1
-    fi
+  if [ "$EUID" -ne 0 ] && [ -z "$BATS_RUN_SKIP" ]; then
+      echo "This script must be run as root"
+      exit 1
+  fi
 }
 
 # Check if the 'jq' command is available.
@@ -59,7 +59,7 @@ parse_smartctl_info_json() {
   local labels="disk=\"${disk}\",type=\"${disk_type}\""
 
   declare -a keys_general=("model_family" "model_name" "device_model" "serial_number" "firmware_version" "vendor" "product" "revision" "lun_id")
-  declare -a keys_binary=("smart_support.is_available" "smart_support.is_enabled" "smart_status.passed")
+  declare -a keys_binary=("smart_support.available" "smart_support.enabled" "smart_status.passed")
 
   # Print the extracted information in Prometheus format
   # Note: use TABS for indentation
@@ -79,12 +79,15 @@ EOF
   echo "$device_infos_jsonized""}" "1"
 
   for key in "${keys_binary[@]}"; do
-    value="$(jq -r ."$key // 0" <<< "$json")"
-    # Convert boolean to numeric
+    value=$(jq -r --arg key "$key" 'getpath($key | split(".")) // "not_found"' <<< "$json")
+    if [ "$value" == "not_found" ]; then
+      echo "Warning: Key $key not found in JSON" >&2
+      continue
+    fi
     if [ "$value" == "true" ]; then
-      value=1
+        value=1
     elif [ "$value" == "false" ]; then
-      value=0
+        value=0
     fi
     echo "$(echo "$key" | tr '.' '_'){${labels}} ${value}"
   done
@@ -264,7 +267,7 @@ output_smartctl_version() {
 is_device_active() {
   local disk=$1
   local type=$2
-  /usr/sbin/smartctl -n standby -d "${type}" "${disk}" > /dev/null
+  /usr/sbin/smartctl -n standby "${disk}" > /dev/null
 }
 
 # This function processes a single storage device.
@@ -302,7 +305,7 @@ process_device() {
 
   # Get and parse SMART information
   local info_json
-  info_json=$(/usr/sbin/smartctl -i -j -d "${type}" "${disk}")
+  info_json=$(/usr/sbin/smartctl -i -j "${disk}")
 
   parse_smartctl_info_json "${disk}" "${type}" "${info_json}"
 
@@ -314,12 +317,12 @@ process_device() {
     model_name=$(echo "$info_json" | jq -r '.model_name // empty')
 
     if [[ "$model_name" == ST* ]]; then
-      attributes_json=$(/usr/sbin/smartctl -A -j -d "${type}" -v 1,raw48:54 -v 7,raw48:54 "${disk}")
+      attributes_json=$(/usr/sbin/smartctl -A -j -v 1,raw48:54 -v 7,raw48:54 "${disk}")
     else
-      attributes_json=$(/usr/sbin/smartctl -A -j -d "${type}" "${disk}")
+      attributes_json=$(/usr/sbin/smartctl -A -j "${disk}")
     fi
   else
-    attributes_json=$(/usr/sbin/smartctl -A -j -d "${type}" "${disk}")
+    attributes_json=$(/usr/sbin/smartctl -A -j "${disk}")
   fi
 
   case ${type} in
