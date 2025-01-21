@@ -85,9 +85,9 @@ EOF
       continue
     fi
     if [ "$value" == "true" ]; then
-      value=1
+        value=1
     elif [ "$value" == "false" ]; then
-      value=0
+        value=0
     fi
     echo "$(echo "$key" | tr '.' '_'){${labels}} ${value}"
   done
