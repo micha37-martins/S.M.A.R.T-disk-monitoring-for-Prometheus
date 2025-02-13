@@ -202,5 +202,9 @@ Therefor high error rates might be blamed on this.
 
 Use flag `--seagate_special` to try to circumvent this behaviour.
 
+## Recommendations
+The `smart_status` is not always available, especially for newer NVME devices
+it is not a relieable source of information so use it with caution.
+
 ## TODO
 - Test and optimize install.sh script
