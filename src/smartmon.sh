@@ -3,6 +3,8 @@
 # This script is designed to collect SMART data from various types of
 # disks (ATA, NVMe) and format it for Prometheus monitoring.
 
+smartmon_version="0.3.16"
+
 # Configurable flag to indicate Seagate-specific behavior
 seagate_special=false
 
@@ -10,6 +12,10 @@ seagate_special=false
 parse_command_line_arguments() {
   while [[ "$#" -gt 0 ]]; do
     case $1 in
+      -v|--version)
+        echo "smartmon_version: $smartmon_version"
+        exit 0
+        ;;
       --seagate_special)
         seagate_special=true
         shift
